@@ -48,8 +48,14 @@ jobs:
       if: steps.cacheHash.outputs.cache-hit != 'true'
       uses: peter-evans/repository-dispatch@v2
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.ACTION }}
         event-type: Source Code Update
+        client-payload: |
+          {
+            "repository_owner": "coolsnowwolf",
+            "repository_name": "lede",
+            "repository_branch": "master"
+          }
 
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@v2
