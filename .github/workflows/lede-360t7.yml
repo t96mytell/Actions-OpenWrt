@@ -51,7 +51,7 @@ jobs:
       UPLOAD_FIRMWARE: true
       UPLOAD_RELEASE: true
       OPENWRT_NAME: lede
-      OPENWRT_NAME1: 360t7
+      OPENWRT_NAME1: mediatek_filogic
       TZ: Asia/Shanghai
 
     steps:
