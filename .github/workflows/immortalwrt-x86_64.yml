@@ -127,7 +127,7 @@ jobs:
           grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
           [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
           echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-          echo "FILE_DATE1=$(date +"%Y年%m月%d日.%H时%M分")" >> $GITHUB_ENV
+          echo "FILE_DATE1=$(date +"%Y年%m月%d日 %H时%M分")" >> $GITHUB_ENV
           
       - name: Check space usage
         if: (!cancelled())
@@ -160,9 +160,24 @@ jobs:
         id: tag
         if: env.UPLOAD_RELEASE == 'true' && !cancelled()
         run: |
-          echo "release_tag=${{ env.FILE_DATE1 }}" >> $GITHUB_OUTPUT
-          touch release.txt
-          echo "📥 固件下载" >> release.txt
+          # 读取设备型号
+          DEVICE_MODEL=$(echo "${{ env.DEVICE_NAME }}" | sed 's/^_//')
+    
+          # 组合架构和型号作为分组标识
+          GROUP_NAME="${{ env.OPENWRT_NAME1 }}_${DEVICE_MODEL}"
+    
+          # 生成带分组标识的标签
+          echo "release_tag=${GROUP_NAME}_${{ env.FILE_DATE1 }}" >> $GITHUB_OUTPUT
+    
+          # 保存分组标识到环境变量（用于后续删除操作）
+          echo "GROUP_NAME=${GROUP_NAME}" >> $GITHUB_ENV
+    
+          # 创建 Release 描述文件
+          echo "📥 固件下载" > release.txt
+          echo "架构: ${{ env.OPENWRT_NAME1 }}" >> release.txt
+          echo "设备: ${DEVICE_MODEL}" >> release.txt
+          echo "编译时间: ${{ env.FILE_DATE1 }}" >> release.txt
+    
           echo "status=success" >> $GITHUB_OUTPUT
 
       - name: Upload firmware to release
@@ -172,6 +187,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.tag.outputs.release_tag }}
+          # 添加架构和型号到标题
+          name: "${{ env.OPENWRT_NAME }} ${{ env.OPENWRT_NAME1 }} (${{ steps.tag.outputs.release_tag }})"
           body_path: release.txt
           files: ${{ env.FIRMWARE }}/*
 
@@ -189,5 +206,6 @@ jobs:
         with:
           keep_latest: 3
           delete_tags: true
+          filter: "${{ env.GROUP_NAME }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
