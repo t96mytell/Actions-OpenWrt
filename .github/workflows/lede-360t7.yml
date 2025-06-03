@@ -76,6 +76,7 @@ jobs:
           git clone https://github.com/immortalwrt/immortalwrt -b master immortalwrt
           ln -sf /workdir/lede $GITHUB_WORKSPACE/lede
           ln -sf /workdir/immortalwrt $GITHUB_WORKSPACE/immortalwrt
+          
       - name: Load custom feeds
         run: |
           [ -e $FEEDS_CONF ] && mv $FEEDS_CONF lede/feeds.conf.default
@@ -90,7 +91,7 @@ jobs:
         run: cd lede && ./scripts/feeds install -a
 
       - name: Replace imm's new version of keepalived to lede
-        run: cd lede && lede/feeds/luci/applications/luci-app-keepalived && lede/feeds/packages/net/keepalived
+        run: cd lede && rm -rf lede/feeds/luci/applications/luci-app-keepalived && rm -rf lede/feeds/packages/net/keepalived
              ln -s immortalwrt/feeds/luci/applications/luci-app-keepalived lede/feeds/luci/applications/luci-app-keepalived
              ln -s immortalwrt/feeds/packages/net/keepalived lede/feeds/packages/net/keepalived
              
