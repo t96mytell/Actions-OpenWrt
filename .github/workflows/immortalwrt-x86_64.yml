@@ -95,6 +95,11 @@ jobs:
           cd immortalwrt
           $GITHUB_WORKSPACE/$DIY_P2_SH
 
+      - name: Load kenzok8/golang
+        run: |
+          rm -rf feeds/packages/lang/golang
+          git clone https://github.com/kenzok8/golang feeds/packages/lang/golang
+
       - name: Start SSH Session (Debug)
         if: |
           github.event_name == 'workflow_dispatch' &&
