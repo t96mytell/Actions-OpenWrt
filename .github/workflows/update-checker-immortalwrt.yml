@@ -36,7 +36,7 @@ jobs:
       id: cacheHash
       uses: actions/cache@v3
       with:
-        path: .commitHash
+        path: .immortalwrt_commitHash
         key: commitHash_${{ steps.getHash.outputs.commitHash }}
 
     - name: Save New Commit Hash
