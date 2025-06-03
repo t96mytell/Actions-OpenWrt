@@ -50,6 +50,12 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         event-type: Source Code Update
+        client-payload: |
+          {
+            "repository_owner": "immortalwrt",
+            "repository_name": "immortalwrt",
+            "repository_branch": "openwrt-24.10"
+          }
 
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@v2
