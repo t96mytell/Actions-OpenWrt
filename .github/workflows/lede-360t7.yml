@@ -68,13 +68,18 @@ jobs:
           sudo rm -rf /workdir
           sudo ln -s /mnt/workdir /workdir
 
-      - name: Clone source code
+      - name: Clone lede source code
         working-directory: /workdir
         run: |
           df -hT $PWD
           git clone $REPO_URL -b $REPO_BRANCH lede
-          git clone https://github.com/immortalwrt/immortalwrt -b master immortalwrt
           ln -sf /workdir/lede $GITHUB_WORKSPACE/lede
+
+      - name: Clone immortalwrt source code
+        working-directory: /workdir
+        run: |
+          df -hT $PWD
+          git clone https://github.com/immortalwrt/immortalwrt -b master immortalwrt
           ln -sf /workdir/immortalwrt $GITHUB_WORKSPACE/immortalwrt
           
       - name: Load custom feeds
