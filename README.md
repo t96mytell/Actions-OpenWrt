@@ -28,6 +28,8 @@ A template for building OpenWrt with GitHub Actions
 - [GitHub Actions](https://github.com/features/actions)
 - [OpenWrt](https://github.com/openwrt/openwrt)
 - [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede)
+- [immortalwrt/immortalwrt](https://github.com/immortalwrt/immortalwrt)
+- [YuasKD/Action-Immortalwrt-x86](https://github.com/YuasKD/Action-Immortalwrt-x86)
 - [Mikubill/transfer](https://github.com/Mikubill/transfer)
 - [softprops/action-gh-release](https://github.com/softprops/action-gh-release)
 - [Mattraks/delete-workflow-runs](https://github.com/Mattraks/delete-workflow-runs)
