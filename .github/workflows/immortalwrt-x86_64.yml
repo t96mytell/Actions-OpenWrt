@@ -184,9 +184,9 @@ jobs:
         id: package
         run: |
           cd immortalwrt
+          make download -j$(nproc)
           find dl -size -1024c -exec ls -l {} \;
           find dl -size -1024c -exec rm -f {} \;
-          make download -j$(nproc)
 
       - name: Compile the firmware
         id: compile
