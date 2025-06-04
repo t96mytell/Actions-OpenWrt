@@ -50,8 +50,8 @@ jobs:
       UPLOAD_BIN_DIR: false
       UPLOAD_FIRMWARE: true
       UPLOAD_RELEASE: true
-      OPENWRT_NAME: immortalwrt
-      OPENWRT_NAME1: x86_64
+      PROJECT_NAME: immortalwrt
+      BUILD_NAME: x86_64
       TZ: Asia/Shanghai
 
     steps:
@@ -153,7 +153,7 @@ jobs:
         uses: actions/upload-artifact@main
         if: steps.organize.outputs.status == 'success' && !cancelled()
         with:
-          name: ${{ env.FILE_DATE }}_${{ env.OPENWRT_NAME }}_${{ env.OPENWRT_NAME1 }}
+          name: ${{ env.FILE_DATE }}_${{ env.PROJECT_NAME }}_${{ env.BUILD_NAME }}
           path: ${{ env.FIRMWARE }}
 
       - name: Generate release tag
@@ -164,7 +164,7 @@ jobs:
           DEVICE_MODEL=$(echo "${{ env.DEVICE_NAME }}" | sed 's/^_//')
     
           # 组合架构和型号作为分组标识
-          GROUP_NAME="${{ env.OPENWRT_NAME1 }}_${DEVICE_MODEL}"
+          GROUP_NAME="${{ env.BUILD_NAME }}_${DEVICE_MODEL}"
     
           # 生成带分组标识的标签
           echo "release_tag=${GROUP_NAME}_${{ env.FILE_DATE }}" >> $GITHUB_OUTPUT
@@ -174,7 +174,7 @@ jobs:
     
           # 创建 Release 描述文件
           echo "📥 固件下载" > release.txt
-          echo "架构: ${{ env.OPENWRT_NAME1 }}" >> release.txt
+          echo "架构: ${{ env.BUILD_NAME }}" >> release.txt
           echo "设备: ${DEVICE_MODEL}" >> release.txt
           echo "编译时间: ${{ env.FILE_DATE1 }}" >> release.txt
     
@@ -188,7 +188,7 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.release_tag }}
           # 添加架构和型号到标题
-          name: "${{ env.OPENWRT_NAME }} ${{ env.OPENWRT_NAME1 }} (${{ steps.tag.outputs.release_tag }})"
+          name: "${{ env.PROJECT_NAME }} ${{ env.BUILD_NAME }} (${{ steps.tag.outputs.release_tag }})"
           body_path: release.txt
           files: ${{ env.FIRMWARE }}/*
 
