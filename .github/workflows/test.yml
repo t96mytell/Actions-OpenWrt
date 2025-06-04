@@ -1,0 +1,282 @@
+#
+# https://github.com/P3TERX/Actions-OpenWrt
+#
+# File: .github/workflows/openwrt-bulder.yml
+# Description: Build OpenWrt using GitHub Actions
+#
+# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
+#
+# This is free software, licensed under the MIT License.
+# See /LICENSE for more information.
+#
+
+name: immortalwrt-x86_64_test
+
+on:
+  repository_dispatch:
+    types: [ImmortalWrt_Update]
+  workflow_dispatch:
+    inputs:
+      repository_owner:
+        description: "仓库所有人"
+        required: false
+        default: "immortalwrt"
+      repository_name:
+        description: "仓库名"
+        required: false
+        default: "immortalwrt"
+      repository_branch:
+        description: "分支"
+        required: false
+        default: "openwrt-24.10"
+      enable_ssh:
+        description: "Enable SSH debugging?"
+        type: boolean
+        required: true
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      # 兼容两种触发方式：手动触发（workflow_dispatch）和自动触发（repository_dispatch）
+      REPO_URL: "https://github.com/${{ github.event.inputs.repository_owner || github.event.client_payload.repository_owner }}/${{ github.event.inputs.repository_name || github.event.client_payload.repository_name }}"
+      REPO_BRANCH: ${{ github.event.inputs.repository_branch || github.event.client_payload.repository_branch }}
+      FEEDS_CONF: feeds.conf.default
+      CONFIG_FILE: diffx86_64.config
+      DIY_P1_SH: diy-part1.sh
+      DIY_P2_SH: diy-part2.sh
+      UPLOAD_BIN_DIR: false
+      UPLOAD_FIRMWARE: true
+      UPLOAD_RELEASE: true
+      PROJECT_NAME: immortalwrt
+      BUILD_NAME: x86_64
+      TZ: Asia/Shanghai
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Initialization environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          sudo timedatectl set-timezone "$TZ"
+          sudo mkdir -p /mnt/workdir
+          sudo chown $USER:$GROUPS /mnt/workdir
+          sudo rm -rf /workdir
+          sudo ln -s /mnt/workdir /workdir
+
+      - name: Clone source code
+        working-directory: /workdir
+        run: |
+          df -hT $PWD
+          git clone $REPO_URL -b $REPO_BRANCH immortalwrt
+          ln -sf /workdir/immortalwrt $GITHUB_WORKSPACE/immortalwrt
+
+      - name: Load custom feeds
+        run: |
+          [ -e $FEEDS_CONF ] && mv $FEEDS_CONF immortalwrt/feeds.conf.default
+          chmod +x $DIY_P1_SH
+          cd immortalwrt
+          $GITHUB_WORKSPACE/$DIY_P1_SH
+
+      - name: Update feeds
+        run: cd immortalwrt && ./scripts/feeds update -a
+
+      - name: Install feeds
+        run: cd immortalwrt && ./scripts/feeds install -a
+
+      - name: Load custom configuration
+        run: |
+          # 移动自定义文件目录（如果存在）
+          [ -e files ] && mv files immortalwrt/files
+
+          cd immortalwrt
+
+          # 检查配置文件是否存在且不为空
+          if [ -n "$CONFIG_FILE" ] && [ -f "$GITHUB_WORKSPACE/$CONFIG_FILE" ]; then
+            echo "➤ 应用配置文件: $CONFIG_FILE"
+            
+            # 通过文件名前缀判断配置类型
+            if [[ "$CONFIG_FILE" == diff* ]]; then
+              echo "➤ 检测为差异化配置（文件名以 'diff' 开头）"
+              # 复制差异配置文件
+              cp "$GITHUB_WORKSPACE/$CONFIG_FILE" .config
+              
+              # 扩展为完整配置
+              make defconfig
+              CONFIG_TYPE="diff"
+            elif [[ "$CONFIG_FILE" == full* ]]; then
+              echo "➤ 检测为完整配置（文件名以 'full' 开头）"
+              # 复制完整配置文件
+              cp "$GITHUB_WORKSPACE/$CONFIG_FILE" .config
+              
+              # 处理新配置选项（保持现有设置）
+              make oldconfig
+              CONFIG_TYPE="full"
+            else
+              echo "➤ 检测为其他类型配置（文件名不以 'diff' 或 'full' 开头）"
+              # 复制配置文件
+              cp "$GITHUB_WORKSPACE/$CONFIG_FILE" .config
+              
+              # 尝试自动判断类型（行数少于500视为差异配置）
+              LINE_COUNT=$(wc -l < "$GITHUB_WORKSPACE/$CONFIG_FILE")
+              if [ $LINE_COUNT -lt 500 ]; then
+                echo "➤ 文件行数少($LINE_COUNT)，按差异化配置处理"
+                make defconfig
+                CONFIG_TYPE="diff"
+              else
+                echo "➤ 文件行数多($LINE_COUNT)，按完整配置处理"
+                make oldconfig
+                CONFIG_TYPE="full"
+              fi
+            fi
+          else
+            # 配置文件不存在或为空的情况
+            if [ -z "$CONFIG_FILE" ]; then
+              echo "➤ 警告: CONFIG_FILE 环境变量为空!"
+            else
+              echo "➤ 警告: $CONFIG_FILE 文件未找到!"
+            fi
+            
+            echo "➤ 使用默认配置"
+            # 生成默认配置
+            make defconfig
+            CONFIG_TYPE="default"
+          fi
+
+          # 应用DIY脚本修改
+          if [ -f "$GITHUB_WORKSPACE/$DIY_P2_SH" ]; then
+            chmod +x "$GITHUB_WORKSPACE/$DIY_P2_SH"
+            echo "➤ 执行DIY脚本: $DIY_P2_SH"
+            "$GITHUB_WORKSPACE/$DIY_P2_SH"
+          else
+            echo "➤ 警告: DIY脚本 $DIY_P2_SH 未找到，跳过执行"
+          fi
+
+          # 根据配置类型执行最终处理
+          if [ "$CONFIG_TYPE" = "diff" ]; then
+            echo "➤ 差异化配置最终处理: 执行 make defconfig"
+            make defconfig
+          elif [ "$CONFIG_TYPE" = "full" ]; then
+            echo "➤ 完整配置最终处理: 跳过 make defconfig (避免破坏配置)"
+          else
+            echo "➤ 默认配置最终处理: 执行 make defconfig"
+            make defconfig
+          fi
+
+      - name: Load kenzok8/golang
+        run: |
+          cd immortalwrt
+          rm -rf feeds/packages/lang/golang
+          git clone https://github.com/kenzok8/golang feeds/packages/lang/golang
+
+      - name: Start SSH Session (Debug)
+        if: |
+          github.event_name == 'workflow_dispatch' &&
+          github.event.inputs.enable_ssh == 'true'
+        uses: mxschmitt/action-tmate@v3
+
+      - name: Download package
+        id: package
+        run: |
+          cd immortalwrt
+          make download -j$(nproc)
+          find dl -size -1024c -exec ls -l {} \;
+          find dl -size -1024c -exec rm -f {} \;
+
+      - name: Compile the firmware
+        id: compile
+        run: |
+          cd immortalwrt
+          echo -e "$(nproc) thread compile"
+          make -j1 V=s || make -j$(nproc) || make -j1
+          echo "status=success" >> $GITHUB_OUTPUT
+          grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+          [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
+          echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+          echo "FILE_DATE1=$(date +"%Y年%m月%d日_%H时%M分")" >> $GITHUB_ENV
+
+      - name: Check space usage
+        if: (!cancelled())
+        run: df -hT
+
+      - name: Upload bin directory
+        uses: actions/upload-artifact@main
+        if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+        with:
+          name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+          path: immortalwrt/bin
+
+      - name: Organize files
+        id: organize
+        if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+        run: |
+          cd immortalwrt/bin/targets/*/*
+          rm -rf packages *rootfs.tar.gz *rootfs.img.gz *rootfs.img *.bin *.config *.buildinfo *.json sha256sums *.manifest
+          echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+          echo "status=success" >> $GITHUB_OUTPUT
+
+      - name: Upload firmware directory
+        uses: actions/upload-artifact@main
+        if: steps.organize.outputs.status == 'success' && !cancelled()
+        with:
+          name: ${{ env.FILE_DATE }}_${{ env.PROJECT_NAME }}_${{ env.BUILD_NAME }}
+          path: ${{ env.FIRMWARE }}
+
+      - name: Generate release tag
+        id: tag
+        if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+        run: |
+          # 读取设备型号
+          DEVICE_MODEL=$(echo "${{ env.DEVICE_NAME }}" | sed 's/^_//')
+
+          # 组合架构和型号作为分组标识
+          GROUP_NAME="${{ env.BUILD_NAME }}_${DEVICE_MODEL}"
+
+          # 生成带分组标识的标签
+          echo "release_tag=${GROUP_NAME}_${{ env.FILE_DATE }}" >> $GITHUB_OUTPUT
+
+          # 保存分组标识到环境变量（用于后续删除操作）
+          echo "GROUP_NAME=${GROUP_NAME}" >> $GITHUB_ENV
+
+          # 创建 Release 描述文件
+          echo "📥 固件下载" > release.txt
+          echo "架构: ${{ env.BUILD_NAME }}" >> release.txt
+          echo "设备: ${DEVICE_MODEL}" >> release.txt
+          echo "编译时间: ${{ env.FILE_DATE1 }}" >> release.txt
+
+          echo "status=success" >> $GITHUB_OUTPUT
+
+      - name: Upload firmware to release
+        uses: softprops/action-gh-release@master
+        if: steps.tag.outputs.status == 'success' && !cancelled()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag.outputs.release_tag }}
+          # 添加架构和型号到标题
+          name: "${{ env.PROJECT_NAME }} ${{ env.BUILD_NAME }} (${{ steps.tag.outputs.release_tag }})"
+          body_path: release.txt
+          files: ${{ env.FIRMWARE }}/*
+
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@main
+        with:
+          retain_days: 0
+          keep_minimum_runs: 2
+          repository: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove old Releases
+        uses: dev-drprasad/delete-older-releases@master
+        if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+        with:
+          keep_latest: 3
+          delete_tags: true
+          filter: "${{ env.GROUP_NAME }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
