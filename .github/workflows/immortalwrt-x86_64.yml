@@ -18,19 +18,19 @@ on:
   workflow_dispatch:
     inputs:
       repository_owner:
-        description: '仓库所有人'
+        description: "仓库所有人"
         required: false
-        default: 'immortalwrt'
+        default: "immortalwrt"
       repository_name:
-        description: '仓库名'
+        description: "仓库名"
         required: false
-        default: 'immortalwrt'
+        default: "immortalwrt"
       repository_branch:
-        description: '分支'
+        description: "分支"
         required: false
-        default: 'openwrt-24.10'
+        default: "openwrt-24.10"
       enable_ssh:
-        description: 'Enable SSH debugging?'
+        description: "Enable SSH debugging?"
         type: boolean
         required: true
         default: false
@@ -93,9 +93,9 @@ jobs:
         run: |
           # 移动自定义文件目录（如果存在）
           [ -e files ] && mv files immortalwrt/files
-          
+
           cd immortalwrt
-          
+
           # 检查配置文件是否存在且不为空
           if [ -n "$CONFIG_FILE" ] && [ -f "$GITHUB_WORKSPACE/$CONFIG_FILE" ]; then
             echo "➤ 应用配置文件: $CONFIG_FILE"
@@ -147,7 +147,7 @@ jobs:
             make defconfig
             CONFIG_TYPE="default"
           fi
-          
+
           # 应用DIY脚本修改
           if [ -f "$GITHUB_WORKSPACE/$DIY_P2_SH" ]; then
             chmod +x "$GITHUB_WORKSPACE/$DIY_P2_SH"
@@ -156,7 +156,7 @@ jobs:
           else
             echo "➤ 警告: DIY脚本 $DIY_P2_SH 未找到，跳过执行"
           fi
-          
+
           # 根据配置类型执行最终处理
           if [ "$CONFIG_TYPE" = "diff" ]; then
             echo "➤ 差异化配置最终处理: 执行 make defconfig"
@@ -178,7 +178,7 @@ jobs:
         if: |
           github.event_name == 'workflow_dispatch' &&
           github.event.inputs.enable_ssh == 'true'
-        uses: mxschmitt/action-tmate@v3    
+        uses: mxschmitt/action-tmate@v3
 
       - name: Download package
         id: package
@@ -199,7 +199,7 @@ jobs:
           [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
           echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
           echo "FILE_DATE1=$(date +"%Y年%m月%d日_%H时%M分")" >> $GITHUB_ENV
-          
+
       - name: Check space usage
         if: (!cancelled())
         run: df -hT
@@ -233,22 +233,22 @@ jobs:
         run: |
           # 读取设备型号
           DEVICE_MODEL=$(echo "${{ env.DEVICE_NAME }}" | sed 's/^_//')
-    
+
           # 组合架构和型号作为分组标识
           GROUP_NAME="${{ env.BUILD_NAME }}_${DEVICE_MODEL}"
-    
+
           # 生成带分组标识的标签
           echo "release_tag=${GROUP_NAME}_${{ env.FILE_DATE }}" >> $GITHUB_OUTPUT
-    
+
           # 保存分组标识到环境变量（用于后续删除操作）
           echo "GROUP_NAME=${GROUP_NAME}" >> $GITHUB_ENV
-    
+
           # 创建 Release 描述文件
           echo "📥 固件下载" > release.txt
           echo "架构: ${{ env.BUILD_NAME }}" >> release.txt
           echo "设备: ${DEVICE_MODEL}" >> release.txt
           echo "编译时间: ${{ env.FILE_DATE1 }}" >> release.txt
-    
+
           echo "status=success" >> $GITHUB_OUTPUT
 
       - name: Upload firmware to release
