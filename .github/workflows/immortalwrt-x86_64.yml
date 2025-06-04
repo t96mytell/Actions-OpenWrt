@@ -90,8 +90,8 @@ jobs:
 
       - name: Load custom configuration
         run: |
-          [ -e files ] && mv files mmortalwrt/files
-          [ -e $CONFIG_FILE ] && mv $CONFIG_FILE mmortalwrt/.config
+          [ -e files ] && mv files immortalwrt/files
+          [ -e $CONFIG_FILE ] && mv $CONFIG_FILE immortalwrt/.config
           chmod +x $DIY_P2_SH
           cd immortalwrt
           $GITHUB_WORKSPACE/$DIY_P2_SH
