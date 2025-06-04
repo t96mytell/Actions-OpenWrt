@@ -181,7 +181,7 @@ jobs:
           GROUP_NAME="${{ env.OPENWRT_NAME1 }}_${DEVICE_MODEL}"
     
           # 生成带分组标识的标签
-          echo "release_tag=${GROUP_NAME}_${{ env.FILE_DATE1 }}" >> $GITHUB_OUTPUT
+          echo "release_tag=${GROUP_NAME}_${{ env.FILE_DATE }}" >> $GITHUB_OUTPUT
     
           # 保存分组标识到环境变量（用于后续删除操作）
           echo "GROUP_NAME=${GROUP_NAME}" >> $GITHUB_ENV
