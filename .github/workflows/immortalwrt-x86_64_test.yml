@@ -184,7 +184,7 @@ jobs:
         id: package
         run: |
           cd immortalwrt
-          make download -j$(nproc)
+          make download -j$(nproc) V=s
           find dl -size -1024c -exec ls -l {} \;
           find dl -size -1024c -exec rm -f {} \;
 
