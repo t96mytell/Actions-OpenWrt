@@ -112,7 +112,7 @@ jobs:
               cat "$GITHUB_WORKSPACE/$CONFIG_FILE" >> .config
               
               # 处理新配置选项
-              make -j1 olddefconfig V=s
+              make defconfig
               CONFIG_TYPE="diff"
               
             elif [[ "$CONFIG_FILE" == full* ]]; then
@@ -121,7 +121,7 @@ jobs:
               cp "$GITHUB_WORKSPACE/$CONFIG_FILE" .config
               
               # 处理新配置选项
-              make -j1 olddefconfig V=s
+              make defconfig
               CONFIG_TYPE="full"
             else
               echo "➤ 检测为其他类型配置（文件名不以 'diff' 或 'full' 开头）"
@@ -131,12 +131,12 @@ jobs:
                 echo "➤ 文件行数少($LINE_COUNT)，按差异化配置处理"
                 make defconfig
                 cat "$GITHUB_WORKSPACE/$CONFIG_FILE" >> .config
-                make -j1 olddefconfig V=s
+                make defconfig
                 CONFIG_TYPE="diff"
               else
                 echo "➤ 文件行数多($LINE_COUNT)，按完整配置处理"
                 cp "$GITHUB_WORKSPACE/$CONFIG_FILE" .config
-                make -j1 olddefconfig V=s
+                make defconfig
                 CONFIG_TYPE="full"
               fi
             fi
@@ -167,7 +167,7 @@ jobs:
           if [ "$CONFIG_TYPE" = "diff" ]; then
             echo "➤ 差异化配置最终处理: 验证配置"
             # 不再执行 make defconfig，避免覆盖自定义设置
-            make -j1 olddefconfig V=s
+            make defconfig
           elif [ "$CONFIG_TYPE" = "full" ]; then
             echo "➤ 完整配置最终处理: 跳过额外处理"
           else
