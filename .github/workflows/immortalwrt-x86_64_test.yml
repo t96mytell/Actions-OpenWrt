@@ -93,6 +93,7 @@ jobs:
         run: |
           # 移动自定义文件目录（如果存在）
           [ -e files ] && mv files immortalwrt/files
+          [ -e $CONFIG_FILE ] && mv $CONFIG_FILE immortalwrt/.config
           chmod +x $DIY_P2_SH
           cd immortalwrt
           $GITHUB_WORKSPACE/$DIY_P2_SH
