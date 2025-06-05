@@ -93,87 +93,10 @@ jobs:
         run: |
           # 移动自定义文件目录（如果存在）
           [ -e files ] && mv files immortalwrt/files
-
+          chmod +x $DIY_P2_SH
           cd immortalwrt
-
-          # 检查配置文件是否存在且不为空
-          if [ -n "$CONFIG_FILE" ] && [ -f "$GITHUB_WORKSPACE/$CONFIG_FILE" ]; then
-            echo "➤ 应用配置文件: $CONFIG_FILE"
-            
-            # 通过文件名前缀判断配置类型
-            if [[ "$CONFIG_FILE" == diff* ]]; then
-              echo "➤ 检测为差异化配置（文件名以 'diff' 开头）"
-              
-              # 首先生成默认配置
-              make defconfig
-              
-              # 应用差异配置
-              echo "➤ 应用差异配置到默认配置"
-              cat "$GITHUB_WORKSPACE/$CONFIG_FILE" >> .config
-              
-              # 处理新配置选项
-              make defconfig
-              CONFIG_TYPE="diff"
-              
-            elif [[ "$CONFIG_FILE" == full* ]]; then
-              echo "➤ 检测为完整配置（文件名以 'full' 开头）"
-              # 复制完整配置文件
-              cp "$GITHUB_WORKSPACE/$CONFIG_FILE" .config
-              
-              # 处理新配置选项
-              make defconfig
-              CONFIG_TYPE="full"
-            else
-              echo "➤ 检测为其他类型配置（文件名不以 'diff' 或 'full' 开头）"
-              # 尝试自动判断类型（行数少于500视为差异配置）
-              LINE_COUNT=$(wc -l < "$GITHUB_WORKSPACE/$CONFIG_FILE")
-              if [ $LINE_COUNT -lt 500 ]; then
-                echo "➤ 文件行数少($LINE_COUNT)，按差异化配置处理"
-                make defconfig
-                cat "$GITHUB_WORKSPACE/$CONFIG_FILE" >> .config
-                make defconfig
-                CONFIG_TYPE="diff"
-              else
-                echo "➤ 文件行数多($LINE_COUNT)，按完整配置处理"
-                cp "$GITHUB_WORKSPACE/$CONFIG_FILE" .config
-                make defconfig
-                CONFIG_TYPE="full"
-              fi
-            fi
-          else
-            # 配置文件不存在或为空的情况
-            if [ -z "$CONFIG_FILE" ]; then
-              echo "➤ 警告: CONFIG_FILE 环境变量为空!"
-            else
-              echo "➤ 警告: $CONFIG_FILE 文件未找到!"
-            fi
-            
-            echo "➤ 使用默认配置"
-            # 生成默认配置
-            make defconfig
-            CONFIG_TYPE="default"
-          fi
-
-          # 应用DIY脚本修改
-          if [ -f "$GITHUB_WORKSPACE/$DIY_P2_SH" ]; then
-            chmod +x "$GITHUB_WORKSPACE/$DIY_P2_SH"
-            echo "➤ 执行DIY脚本: $DIY_P2_SH"
-            "$GITHUB_WORKSPACE/$DIY_P2_SH"
-          else
-            echo "➤ 警告: DIY脚本 $DIY_P2_SH 未找到，跳过执行"
-          fi
-
-          # 根据配置类型执行最终处理
-          if [ "$CONFIG_TYPE" = "diff" ]; then
-            echo "➤ 差异化配置最终处理: 验证配置"
-            # 不再执行 make defconfig，避免覆盖自定义设置
-            make defconfig
-          elif [ "$CONFIG_TYPE" = "full" ]; then
-            echo "➤ 完整配置最终处理: 跳过额外处理"
-          else
-            echo "➤ 默认配置最终处理: 执行 make defconfig"
-            make defconfig
-          fi
+          $GITHUB_WORKSPACE/$DIY_P2_SH
+          make defconfig
 
       - name: Load kenzok8/golang
         run: |
