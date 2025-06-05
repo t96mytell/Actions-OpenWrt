@@ -10,7 +10,7 @@
 # See /LICENSE for more information.
 #
 
-name: immortalwrt-x86_64_test
+name: immortalwrt-x86_64
 
 on:
   repository_dispatch:
@@ -44,7 +44,7 @@ jobs:
       REPO_URL: "https://github.com/${{ github.event.inputs.repository_owner || github.event.client_payload.repository_owner }}/${{ github.event.inputs.repository_name || github.event.client_payload.repository_name }}"
       REPO_BRANCH: ${{ github.event.inputs.repository_branch || github.event.client_payload.repository_branch }}
       FEEDS_CONF: feeds.conf.default
-      CONFIG_FILE: fullx86_64.config
+      CONFIG_FILE: diffx86_64.config
       DIY_P1_SH: diy-part1.sh
       DIY_P2_SH: diy-part2.sh
       UPLOAD_BIN_DIR: false
@@ -103,34 +103,40 @@ jobs:
             # 通过文件名前缀判断配置类型
             if [[ "$CONFIG_FILE" == diff* ]]; then
               echo "➤ 检测为差异化配置（文件名以 'diff' 开头）"
-              # 复制差异配置文件
-              cp "$GITHUB_WORKSPACE/$CONFIG_FILE" .config
               
-              # 扩展为完整配置
+              # 首先生成默认配置
               make defconfig
+              
+              # 应用差异配置
+              echo "➤ 应用差异配置到默认配置"
+              cat "$GITHUB_WORKSPACE/$CONFIG_FILE" >> .config
+              
+              # 处理新配置选项
+              make olddefconfig
               CONFIG_TYPE="diff"
+              
             elif [[ "$CONFIG_FILE" == full* ]]; then
               echo "➤ 检测为完整配置（文件名以 'full' 开头）"
               # 复制完整配置文件
               cp "$GITHUB_WORKSPACE/$CONFIG_FILE" .config
               
-              # 处理新配置选项（保持现有设置）
-              make oldconfig
+              # 处理新配置选项
+              make olddefconfig
               CONFIG_TYPE="full"
             else
               echo "➤ 检测为其他类型配置（文件名不以 'diff' 或 'full' 开头）"
-              # 复制配置文件
-              cp "$GITHUB_WORKSPACE/$CONFIG_FILE" .config
-              
               # 尝试自动判断类型（行数少于500视为差异配置）
               LINE_COUNT=$(wc -l < "$GITHUB_WORKSPACE/$CONFIG_FILE")
               if [ $LINE_COUNT -lt 500 ]; then
                 echo "➤ 文件行数少($LINE_COUNT)，按差异化配置处理"
                 make defconfig
+                cat "$GITHUB_WORKSPACE/$CONFIG_FILE" >> .config
+                make olddefconfig
                 CONFIG_TYPE="diff"
               else
                 echo "➤ 文件行数多($LINE_COUNT)，按完整配置处理"
-                make oldconfig
+                cp "$GITHUB_WORKSPACE/$CONFIG_FILE" .config
+                make olddefconfig
                 CONFIG_TYPE="full"
               fi
             fi
@@ -159,10 +165,11 @@ jobs:
 
           # 根据配置类型执行最终处理
           if [ "$CONFIG_TYPE" = "diff" ]; then
-            echo "➤ 差异化配置最终处理: 执行 make defconfig"
-            make defconfig
+            echo "➤ 差异化配置最终处理: 验证配置"
+            # 不再执行 make defconfig，避免覆盖自定义设置
+            make olddefconfig
           elif [ "$CONFIG_TYPE" = "full" ]; then
-            echo "➤ 完整配置最终处理: 跳过 make defconfig (避免破坏配置)"
+            echo "➤ 完整配置最终处理: 跳过额外处理"
           else
             echo "➤ 默认配置最终处理: 执行 make defconfig"
             make defconfig
