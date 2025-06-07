@@ -202,13 +202,11 @@ jobs:
           repository: ${{ github.repository }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Remove old Releases
-        uses: ncipollo/release-action@v1
-        if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      - name: Delete old releases
+        if: ${{ env.UPLOAD_RELEASE == 'true' && !cancelled() }}
+        uses: dev-drprasad/delete-old-releases@v1
+        with:
+          keep_latest: 3
+          delete_tag_pattern: "${{ env.GROUP_NAME }}_.*"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          pattern: '${{ env.GROUP_NAME }}'
-          keep: 3
-          delete: true
-          allow_tag_pattern: true
