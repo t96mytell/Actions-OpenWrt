@@ -45,8 +45,8 @@ jobs:
       REPO_BRANCH: ${{ github.event.inputs.repository_branch || github.event.client_payload.repository_branch }}
       FEEDS_CONF: feeds.conf.default
       CONFIG_FILE: config/diffx86_64.config
-      DIY_P1_SH: diy-part1.sh
-      DIY_P2_SH: diy-part2.sh
+      DIY_P1_SH: diy-feeds-immortalwrt.sh
+      DIY_P2_SH: Modify_default.sh
       UPLOAD_BIN_DIR: false
       UPLOAD_FIRMWARE: true
       UPLOAD_RELEASE: true
