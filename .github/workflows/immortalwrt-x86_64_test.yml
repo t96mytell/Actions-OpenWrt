@@ -203,10 +203,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Delete old releases
-        if: env.UPLOAD_RELEASE == 'true' && !cancelled()
-        uses: dev-drprasad/delete-older-releases@v0.3.4
+        if: ${{ env.UPLOAD_RELEASE == 'true' && !cancelled() }}
+        uses: dev-drprasad/delete-older-releases@master
         with:
           keep_latest: 3
-          delete_tag_pattern: "${{ env.GROUP_NAME }}"
+          delete_tag_pattern: "${{ env.GROUP_NAME }}_.*"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
