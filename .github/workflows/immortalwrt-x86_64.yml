@@ -204,9 +204,9 @@ jobs:
 
       - name: Delete old releases
         if: env.UPLOAD_RELEASE == 'true' && !cancelled()
-        uses: dawidd6/action-delete-old-releases@v2
+        uses: dev-drprasad/delete-older-releases@v0.3.4
         with:
           keep_latest: 3
-          tags_pattern: "${{ env.GROUP_NAME }}"
+          delete_tag_pattern: "${{ env.GROUP_NAME }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
