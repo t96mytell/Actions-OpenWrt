@@ -83,17 +83,17 @@ jobs:
           git clone https://github.com/immortalwrt/immortalwrt -b master immortalwrt
           ln -sf /workdir/immortalwrt $GITHUB_WORKSPACE/immortalwrt
           
-      - name: Load custom feeds
+      - name: Load custom feeds (lede)
         run: |
           [ -e $FEEDS_CONF ] && mv $FEEDS_CONF lede/feeds.conf.default
           chmod +x $DIY_P1_SH
           cd lede
           $GITHUB_WORKSPACE/$DIY_P1_SH
 
-      - name: Update/Install lede feeds
+      - name: Update/Install feeds (lede)
         run: cd lede && ./scripts/feeds update -a && ./scripts/feeds install -a
 
-      - name: Update/Install immortalwrt feeds
+      - name: Update/Install feeds (immortalwrt)
         run: cd immortalwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
 
       - name: Replace imm's new version of keepalived to lede
