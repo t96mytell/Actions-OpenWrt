@@ -90,10 +90,10 @@ jobs:
           cd lede
           $GITHUB_WORKSPACE/$DIY_P1_SH
 
-      - name: Update/Install lede feeds
+      - name: Update/Install feeds (lede)
         run: cd lede && ./scripts/feeds update -a && ./scripts/feeds install -a
 
-      - name: Update/Install immortalwrt feeds
+      - name: Update/Install feeds (immortalwrt)
         run: cd immortalwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
 
       - name: Replace imm's new version of keepalived to lede
