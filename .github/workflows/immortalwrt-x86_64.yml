@@ -89,6 +89,12 @@ jobs:
       - name: Install feeds
         run: cd immortalwrt && ./scripts/feeds install -a
 
+      - name: Fix Rust configuration for CI
+        run: |
+          cd immortalwrt
+          echo "修复 Rust 配置以避免 CI 错误..."
+          sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=if-unchanged/' feeds/packages/lang/rust/Makefile
+
       - name: Load custom configuration
         run: |
           # 移动自定义文件目录（如果存在）
