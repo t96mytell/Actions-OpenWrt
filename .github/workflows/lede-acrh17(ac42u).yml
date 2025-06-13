@@ -83,7 +83,7 @@ jobs:
           git clone https://github.com/immortalwrt/immortalwrt -b master immortalwrt
           ln -sf /workdir/immortalwrt $GITHUB_WORKSPACE/immortalwrt
           
-      - name: Load custom feeds
+      - name: Load custom feeds (lede)
         run: |
           [ -e $FEEDS_CONF ] && mv $FEEDS_CONF lede/feeds.conf.default
           chmod +x $DIY_P1_SH
