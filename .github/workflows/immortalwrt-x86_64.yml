@@ -105,11 +105,11 @@ jobs:
           $GITHUB_WORKSPACE/$DIY_P2_SH
           make defconfig
 
-      - name: Load kenzok8/golang
+      - name: Load sbwml/packages_lang_golang
         run: |
           cd immortalwrt
           rm -rf feeds/packages/lang/golang
-          git clone https://github.com/kenzok8/golang feeds/packages/lang/golang
+          git clone https://github.com/sbwml/packages_lang_golang -b 24.x feeds/packages/lang/golang
 
       - name: Start SSH Session (Debug)
         if: |
