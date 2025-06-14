@@ -89,7 +89,18 @@ jobs:
       - name: Symlink lua-neturl if present
         run: |
           cd immortalwrt
-          [ -d feeds/packages/lang/lua-neturl ] && ln -sfn feeds/packages/lang/lua-neturl feeds/small/lua-neturl || echo "⚠️ lua-neturl not found, skip linking"
+          if [ -d feeds/packages/lang/lua-neturl ]; then
+            mkdir -p feeds/small
+            ln -sfn ../packages/lang/lua-neturl feeds/small/lua-neturl
+            if [ -L feeds/small/lua-neturl ]; then
+              echo "Created symlink: feeds/small/lua-neturl → $(readlink feeds/small/lua-neturl)"
+            else
+              echo "Failed to create lua-neturl symlink" >&2
+              exit 1
+            fi
+          else
+            echo "lua-neturl not found in packages feed, skipping"
+          fi
 
       - name: Install feeds
         run: cd immortalwrt && ./scripts/feeds install -a
