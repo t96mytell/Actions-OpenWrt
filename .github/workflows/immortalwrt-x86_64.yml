@@ -93,7 +93,7 @@ jobs:
         run: |
           cd immortalwrt
           echo "修复 Rust 配置以避免 CI 错误..."
-          sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=if-unchanged/' feeds/packages/lang/rust/Makefile
+          sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/' feeds/packages/lang/rust/Makefile
 
       - name: Load custom configuration
         run: |
