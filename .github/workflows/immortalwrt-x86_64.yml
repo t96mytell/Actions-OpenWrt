@@ -101,13 +101,6 @@ jobs:
           echo "修复 Rust 配置以避免 CI 错误..."
           sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/' feeds/packages/lang/rust/Makefile
 
-      - name: Replace the same package of the small project with the immortalwrt project lua-neturl to avoid errors
-        run: |
-          cd immortalwrt
-          echo "用immortalwrt项目lua-neturl替换small项目的相同包以避免错误..."
-          rm -rf feeds/small/lua-neturl
-          ln -s feeds/packages/lang/lua-neturl feeds/small/lua-neturl
-
       - name: Load custom configuration
         run: |
           # 移动自定义文件目录（如果存在）
@@ -117,6 +110,13 @@ jobs:
           cd immortalwrt
           $GITHUB_WORKSPACE/$DIY_P2_SH
           make defconfig
+
+      - name: Replace the same package of the small project with the immortalwrt project lua-neturl to avoid errors
+        run: |
+          cd immortalwrt
+          echo "用immortalwrt项目lua-neturl替换small项目的相同包以避免错误..."
+          rm -rf feeds/small/lua-neturl
+          ln -s feeds/packages/lang/lua-neturl feeds/small/lua-neturl
 
       - name: Start SSH Session (Debug)
         if: |
