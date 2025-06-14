@@ -89,11 +89,24 @@ jobs:
       - name: Install feeds
         run: cd immortalwrt && ./scripts/feeds install -a
 
+      - name: Load sbwml/packages_lang_golang
+        run: |
+          cd immortalwrt
+          rm -rf feeds/packages/lang/golang
+          git clone https://github.com/sbwml/packages_lang_golang -b 24.x feeds/packages/lang/golang
+
       - name: Fix Rust configuration for CI
         run: |
           cd immortalwrt
           echo "修复 Rust 配置以避免 CI 错误..."
           sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/' feeds/packages/lang/rust/Makefile
+
+      - name: Replace the same package of the small project with the immortalwrt project lua-neturl to avoid errors
+        run: |
+          cd immortalwrt
+          echo "用immortalwrt项目lua-neturl替换small项目的相同包以避免错误..."
+          rm -rf feeds/small/lua-neturl
+          ln -s feeds/packages/lang/lua-neturl feeds/small/lua-neturl
 
       - name: Load custom configuration
         run: |
@@ -104,12 +117,6 @@ jobs:
           cd immortalwrt
           $GITHUB_WORKSPACE/$DIY_P2_SH
           make defconfig
-
-      - name: Load sbwml/packages_lang_golang
-        run: |
-          cd immortalwrt
-          rm -rf feeds/packages/lang/golang
-          git clone https://github.com/sbwml/packages_lang_golang -b 24.x feeds/packages/lang/golang
 
       - name: Start SSH Session (Debug)
         if: |
