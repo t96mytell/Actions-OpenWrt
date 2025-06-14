@@ -102,6 +102,7 @@ jobs:
           git clone https://github.com/sbwml/packages_lang_golang -b 24.x feeds/packages/lang/golang
 
       - name: Replace the same package of the small project with the immortalwrt project lua-neturl
+        run: |
           cd immortalwrt
           echo "用immortalwrt项目lua-neturl替换small项目的相同包以避免错误..."
           rm -rf feeds/small/lua-neturl
