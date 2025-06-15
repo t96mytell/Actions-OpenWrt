@@ -86,25 +86,15 @@ jobs:
       - name: Update feeds
         run: cd immortalwrt && ./scripts/feeds update -a
 
-      - name: Symlink lua-neturl if present
+      - name: Copy lua-neturl safely into small feed
         run: |
           cd immortalwrt
-          echo "当前目录: $(pwd)"
-          
           if [ -d feeds/packages/lang/lua-neturl ]; then
-            echo "找到 lua-neturl 目录: feeds/packages/lang/lua-neturl"
-            echo "目标路径: feeds/small/lua-neturl"
-            
-            if [ -e feeds/small/lua-neturl ]; then
-              echo "目标已存在，删除: feeds/small/lua-neturl"
-              rm -rf feeds/small/lua-neturl
-            fi
-            ln -sfnv feeds/packages/lang/lua-neturl feeds/small/lua-neturl
-            echo "✅ 符号链接创建成功"
-            echo "链接详情:"
-            ls -ld feeds/small/lua-neturl
+            echo "🔁 复制 lua-neturl 包到 small feed..."
+            rm -rf feeds/small/lua-neturl
+            cp -a feeds/packages/lang/lua-neturl feeds/small/
           else
-            echo "⚠️ feeds/packages/lang/lua-neturl 未找到，跳过链接"
+            echo "⚠️ 未找到 feeds/packages/lang/lua-neturl，跳过复制"
           fi
 
       - name: Install feeds
