@@ -95,18 +95,16 @@ jobs:
             echo "找到 lua-neturl 目录: feeds/packages/lang/lua-neturl"
             echo "目标路径: feeds/small/lua-neturl"
             
-            # 显示目标当前状态
             if [ -e feeds/small/lua-neturl ]; then
-              echo "目标已存在:"
-              ls -ld feeds/small/lua-neturl
-              echo "将替换为新的符号链接"
+              echo "目标已存在，删除: feeds/small/lua-neturl"
+              rm -rf feeds/small/lua-neturl
             fi
-            
-            # 执行链接操作
             ln -sfnv feeds/packages/lang/lua-neturl feeds/small/lua-neturl
-            echo "✅符号链接创建成功"
+            echo "✅ 符号链接创建成功"
+            echo "链接详情:"
+            ls -ld feeds/small/lua-neturl
           else
-            echo "⚠️feeds/packages/lang/lua-neturl 未找到，跳过链接"
+            echo "⚠️ feeds/packages/lang/lua-neturl 未找到，跳过链接"
           fi
 
       - name: Install feeds
