@@ -102,12 +102,6 @@ jobs:
           echo "修复 Rust 配置以避免 CI 错误..."
           sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/' feeds/packages/lang/rust/Makefile
 
-      - name: Load sbwml/packages_lang_golang
-        run: |
-          cd lede
-          rm -rf feeds/packages/lang/golang
-          git clone https://github.com/sbwml/packages_lang_golang -b 24.x feeds/packages/lang/golang
-
       - name: Replace imm's new version of keepalived to lede
         run: |
              rm -rf lede/feeds/luci/applications/luci-app-keepalived && rm -rf lede/feeds/packages/net/keepalived
