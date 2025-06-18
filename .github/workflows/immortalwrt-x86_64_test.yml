@@ -10,7 +10,7 @@
 # See /LICENSE for more information.
 #
 
-name: immortalwrt-x86_64
+name: immortalwrt-x86_64_test
 
 on:
   repository_dispatch:
