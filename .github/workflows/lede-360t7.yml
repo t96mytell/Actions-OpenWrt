@@ -96,12 +96,6 @@ jobs:
       - name: Update/Install feeds (immortalwrt)
         run: cd immortalwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
 
-      - name: Fix Rust configuration for CI
-        run: |
-          cd lede
-          echo "修复 Rust 配置以避免 CI 错误..."
-          sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/' feeds/packages/lang/rust/Makefile
-
       - name: Replace imm's new version of keepalived to lede
         run: |
              rm -rf lede/feeds/luci/applications/luci-app-keepalived && rm -rf lede/feeds/packages/net/keepalived
