@@ -17,5 +17,5 @@ sed -i '/openwrt-23.05/ s/openwrt-23.05/openwrt-24.10/g' feeds.conf.default
 # Add a feed source
 #echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
 #echo 'src-git passwall https://github.com/xiaorouji/openwrt-passwall' >>feeds.conf.default
-sed -i '1i src-git small https://github.com/kenzok8/small' feeds.conf.default
-sed -i '2i src-git custom https://github.com/t96mytell/openwrt-packages-23.05' feeds.conf.default
+#sed -i '1i src-git small https://github.com/kenzok8/small' feeds.conf.default
+sed -i '1i src-git custom https://github.com/t96mytell/openwrt-packages-23.05' feeds.conf.default
