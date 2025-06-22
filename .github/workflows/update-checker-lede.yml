@@ -33,12 +33,8 @@ jobs:
     - name: Get Commit Hash
       id: getHash
       run: |
-        temp_dir=$(mktemp -d)
-        git clone --depth 1 $REPO_URL -b $REPO_BRANCH "$temp_dir"
-        commit_hash=$(git -C "$temp_dir" rev-parse HEAD)
+        commit_hash=$(git ls-remote "$REPO_URL" "refs/heads/$REPO_BRANCH" | awk '{print $1}')
         echo "commitHash=$commit_hash" >> $GITHUB_OUTPUT
-        
-        rm -rf "$temp_dir"
 
     - name: Compare Commit Hash
       id: cacheHash
