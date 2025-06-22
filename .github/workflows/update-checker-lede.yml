@@ -33,8 +33,12 @@ jobs:
     - name: Get Commit Hash
       id: getHash
       run: |
-        git clone --depth 1 $REPO_URL -b $REPO_BRANCH .
-        echo "commitHash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+        temp_dir=$(mktemp -d)
+        git clone --depth 1 $REPO_URL -b $REPO_BRANCH "$temp_dir"
+        commit_hash=$(git -C "$temp_dir" rev-parse HEAD)
+        echo "commitHash=$commit_hash" >> $GITHUB_OUTPUT
+        
+        rm -rf "$temp_dir"
 
     - name: Compare Commit Hash
       id: cacheHash
@@ -46,14 +50,14 @@ jobs:
     - name: Save New Commit Hash
       if: steps.cacheHash.outputs.cache-hit != 'true'
       run: |
-        echo ${{ steps.getHash.outputs.commitHash }} | tee .commitHash
+        echo ${{ steps.getHash.outputs.commitHash }} | tee .lede_commitHash
 
     - name: Commit and push changes
       if: steps.cacheHash.outputs.cache-hit != 'true'
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git add .commitHash
+        git add .lede_commitHash
         git commit -m "Update LEDE commit hash: ${{ steps.getHash.outputs.commitHash }}"
         git push
 
