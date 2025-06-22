@@ -86,17 +86,6 @@ jobs:
       - name: Update feeds
         run: cd immortalwrt && ./scripts/feeds update -a
 
-      - name: Copy lua-neturl safely into small feed
-        run: |
-          cd immortalwrt
-          if [ -d feeds/packages/lang/lua-neturl ]; then
-            echo "🔁 复制 lua-neturl 包到 small feed..."
-            rm -rf feeds/small/lua-neturl
-            cp -a feeds/packages/lang/lua-neturl feeds/small/
-          else
-            echo "⚠️ 未找到 feeds/packages/lang/lua-neturl，跳过复制"
-          fi
-
       - name: Install feeds
         run: cd immortalwrt && ./scripts/feeds install -a
 
