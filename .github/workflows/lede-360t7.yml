@@ -46,7 +46,7 @@ jobs:
       FEEDS_CONF: feeds.conf.default
       CONFIG_FILE: config/diff360t7.config
       DIY_P1_SH: diy-feeds-lede.sh
-      DIY_P2_SH: Modify_default.sh
+      DIY_P2_SH: modify_default.sh
       UPLOAD_BIN_DIR: false
       UPLOAD_FIRMWARE: true
       UPLOAD_RELEASE: true
