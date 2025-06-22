@@ -50,14 +50,14 @@ jobs:
     - name: Save New Commit Hash
       if: steps.cacheHash.outputs.cache-hit != 'true'
       run: |
-        echo ${{ steps.getHash.outputs.commitHash }} | tee .commitHash
+        echo ${{ steps.getHash.outputs.commitHash }} | tee .immortalwrt_commitHash
 
     - name: Commit and push changes
       if: steps.cacheHash.outputs.cache-hit != 'true'
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git add .commitHash
+        git add .immortalwrt_commitHash
         git commit -m "Update ImmortalWrt commit hash: ${{ steps.getHash.outputs.commitHash }}"
         git push
 
