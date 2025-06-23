@@ -69,19 +69,12 @@ jobs:
           sudo rm -rf /workdir
           sudo ln -s /mnt/workdir /workdir
 
-      - name: Clone lede source code
-        working-directory: /workdir
-        run: |
-          df -hT $PWD
-          git clone $REPO_URL -b $REPO_BRANCH lede
-          ln -sf /workdir/lede $GITHUB_WORKSPACE/lede
       - name: Clone source code
         working-directory: /workdir
         run: |
           df -hT $PWD
           git clone $REPO_URL -b $REPO_BRANCH lede
           ln -sf /workdir/lede $GITHUB_WORKSPACE/lede
-
           
       - name: Load custom feeds
         run: |
@@ -98,7 +91,7 @@ jobs:
 
       - name: Delete the keepalived package from the lede project
         run: |
-             rm -rf lede/feeds/luci/applications/luci-app-keepalived && rm -rf lede/feeds/packages/net/keepalived
+          rm -rf lede/feeds/luci/applications/luci-app-keepalived && rm -rf lede/feeds/packages/net/keepalived
              
       - name: Load custom configuration
         run: |
