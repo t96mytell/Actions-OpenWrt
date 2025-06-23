@@ -75,23 +75,26 @@ jobs:
           df -hT $PWD
           git clone $REPO_URL -b $REPO_BRANCH lede
           ln -sf /workdir/lede $GITHUB_WORKSPACE/lede
-
-      - name: Clone immortalwrt source code
+      - name: Clone source code
         working-directory: /workdir
         run: |
           df -hT $PWD
-          git clone https://github.com/immortalwrt/immortalwrt -b master immortalwrt
-          ln -sf /workdir/immortalwrt $GITHUB_WORKSPACE/immortalwrt
+          git clone $REPO_URL -b $REPO_BRANCH lede
+          ln -sf /workdir/lede $GITHUB_WORKSPACE/lede
+
           
-      - name: Load custom feeds (lede)
+      - name: Load custom feeds
         run: |
           [ -e $FEEDS_CONF ] && mv $FEEDS_CONF lede/feeds.conf.default
           chmod +x $DIY_P1_SH
           cd lede
           $GITHUB_WORKSPACE/$DIY_P1_SH
 
-      - name: Update/Install feeds (lede)
-        run: cd lede && ./scripts/feeds update -a && ./scripts/feeds install -a
+      - name: Update feeds
+        run: cd lede && ./scripts/feeds update -a
+
+      - name: Install feeds
+        run: cd lede && ./scripts/feeds install -a
 
       - name: Delete the keepalived package from the lede project
         run: |
