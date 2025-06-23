@@ -93,14 +93,9 @@ jobs:
       - name: Update/Install feeds (lede)
         run: cd lede && ./scripts/feeds update -a && ./scripts/feeds install -a
 
-      - name: Update/Install feeds (immortalwrt)
-        run: cd immortalwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
-
-      - name: Replace imm's new version of keepalived to lede
+      - name: Delete the keepalived package from the lede project
         run: |
              rm -rf lede/feeds/luci/applications/luci-app-keepalived && rm -rf lede/feeds/packages/net/keepalived
-             ln -s immortalwrt/feeds/luci/applications/luci-app-keepalived lede/feeds/luci/applications/luci-app-keepalived
-             ln -s immortalwrt/feeds/packages/net/keepalived lede/feeds/packages/net/keepalived
              
       - name: Load custom configuration
         run: |
