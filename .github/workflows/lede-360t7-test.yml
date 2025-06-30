@@ -161,24 +161,26 @@ jobs:
         run: |
           # 读取设备型号
           DEVICE_MODEL=$(echo "${{ env.DEVICE_NAME }}" | sed 's/^_//')
-    
-          # 组合架构和型号作为分组标识
+          
+          # 组合架构和型号作为设备组标识
           GROUP_NAME="${{ env.BUILD_NAME }}_${DEVICE_MODEL}"
-    
-          # 生成带分组标识的标签
-          echo "release_tag=${GROUP_NAME}_${{ env.FILE_DATE }}" >> $GITHUB_OUTPUT
-    
-          # 保存分组标识到环境变量（用于后续删除操作）
+          
+          # 使用 PROJECT_NAME 和设备组标识生成标签
+          RELEASE_TAG="${{ env.PROJECT_NAME }}_${GROUP_NAME}_${{ env.FILE_DATE }}"
+          
+          echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
           echo "GROUP_NAME=${GROUP_NAME}" >> $GITHUB_ENV
-    
+          
           # 创建 Release 描述文件
           echo "📥 固件下载" > release.txt
+          echo "源码项目: ${{ env.PROJECT_NAME }}" >> release.txt
           echo "架构: ${{ env.BUILD_NAME }}" >> release.txt
           echo "设备: ${DEVICE_MODEL}" >> release.txt
           echo "编译时间: ${{ env.FILE_DATE1 }}" >> release.txt
-    
+          echo "标签: ${RELEASE_TAG}" >> release.txt
+          
           echo "status=success" >> $GITHUB_OUTPUT
-
+      
       - name: Upload firmware to release
         uses: softprops/action-gh-release@master
         if: steps.tag.outputs.status == 'success' && !cancelled()
@@ -186,11 +188,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.tag.outputs.release_tag }}
-          # 添加架构和型号到标题
           name: "${{ env.PROJECT_NAME }} ${{ env.BUILD_NAME }} (${{ steps.tag.outputs.release_tag }})"
           body_path: release.txt
           files: ${{ env.FIRMWARE }}/*
-
+      
       - name: Delete workflow runs
         uses: Mattraks/delete-workflow-runs@main
         with:
@@ -198,12 +199,62 @@ jobs:
           keep_minimum_runs: 5
           repository: ${{ github.repository }}
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Delete old releases
+      
+      - name: Cleanup old releases and tags
         if: ${{ env.UPLOAD_RELEASE == 'true' && !cancelled() }}
-        uses: dev-drprasad/delete-older-releases@master
-        with:
-          keep_latest: 3
-          delete_tag_pattern: "${{ env.GROUP_NAME }}"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+          
+          # 获取当前项目名和设备组名
+          PROJECT_NAME="${{ env.PROJECT_NAME }}"
+          GROUP_NAME="${{ env.GROUP_NAME }}"
+          echo "当前源码项目: $PROJECT_NAME"
+          echo "当前设备组: $GROUP_NAME"
+          
+          # 获取所有Release（包含标签名、ID和创建时间）
+          RELEASES=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases" | \
+            jq -r '.[] | .tag_name + "|" + .id + "|" + .created_at')
+          
+          # 筛选匹配当前项目和设备组的Release
+          MATCHING_RELEASES=""
+          while IFS='|' read -r TAG ID CREATED_AT; do
+            # 检查标签是否包含项目名和设备组名
+            if [[ "$TAG" == *"${PROJECT_NAME}_${GROUP_NAME}_"* ]]; then
+              MATCHING_RELEASES+="$TAG|$ID|$CREATED_AT"$'\n'
+            fi
+          done <<< "$RELEASES"
+          
+          # 按创建时间排序（最新的在前）
+          SORTED_RELEASES=$(echo "$MATCHING_RELEASES" | sort -t'|' -k3 -r)
+          
+          # 保留最新的3个Release
+          KEEP_COUNT=3
+          KEEP_RELEASES=$(echo "$SORTED_RELEASES" | head -n $KEEP_COUNT | cut -d'|' -f1)
+          
+          # 输出调试信息
+          echo "匹配到的版本:"
+          echo "$MATCHING_RELEASES"
+          echo "保留的版本:"
+          echo "$KEEP_RELEASES"
+          
+          # 删除旧的Release和关联的Tag
+          while IFS='|' read -r TAG ID CREATED_AT; do
+            if [[ ! " ${KEEP_RELEASES[@]} " =~ " ${TAG} " ]]; then
+              echo "删除版本: $TAG (创建时间: $CREATED_AT)"
+              
+              # 删除Release
+              curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                "https://api.github.com/repos/${{ github.repository }}/releases/$ID"
+              
+              # 删除Tag
+              curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                "https://api.github.com/repos/${{ github.repository }}/git/refs/tags/$TAG"
+            fi
+          done <<< "$SORTED_RELEASES"
+          
+          # 清理本地标签引用
+          git fetch --prune --prune-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
