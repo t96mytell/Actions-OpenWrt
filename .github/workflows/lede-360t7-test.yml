@@ -173,11 +173,9 @@ jobs:
           
           # 创建 Release 描述文件
           echo "📥 固件下载" > release.txt
-          echo "源码项目: ${{ env.PROJECT_NAME }}" >> release.txt
           echo "架构: ${{ env.BUILD_NAME }}" >> release.txt
           echo "设备: ${DEVICE_MODEL}" >> release.txt
           echo "编译时间: ${{ env.FILE_DATE1 }}" >> release.txt
-          echo "标签: ${RELEASE_TAG}" >> release.txt
           
           echo "status=success" >> $GITHUB_OUTPUT
       
@@ -203,10 +201,9 @@ jobs:
       - name: Cleanup old releases and tags
         if: ${{ env.UPLOAD_RELEASE == 'true' && !cancelled() }}
         run: |
-          # 设置安全选项
           set -e
           
-          # 安装必要工具（jq 在 GitHub Actions 中通常已安装，但确保存在）
+          # 安装必要工具
           if ! command -v jq &> /dev/null; then
             sudo apt-get update
             sudo apt-get install -y jq
