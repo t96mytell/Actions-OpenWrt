@@ -10,7 +10,7 @@
 # See /LICENSE for more information.
 #
 
-name: immortalwrt-diffacrh17(ac42u)
+name: immortalwrt-acrh17(ac42u)
 
 on:
   repository_dispatch:
