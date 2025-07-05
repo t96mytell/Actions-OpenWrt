@@ -59,19 +59,20 @@ jobs:
 
     - name: Trigger build
       if: steps.cacheHash.outputs.cache-hit != 'true'
-      uses: peter-evans/repository-dispatch@v2
+      uses: peter-evans/repository-dispatch@main
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        event-type: LEDE_Update
+        event-type: ImmortalWrt_Update
         client-payload: |
           {
-            "repository_owner": "coolsnowwolf",
-            "repository_name": "lede",
+            "repository_owner": "immortalwrt",
+            "repository_name": "immortalwrt",
             "repository_branch": "master"
           }
 
     - name: Delete workflow runs
-      uses: Mattraks/delete-workflow-runs@v2
+      uses: Mattraks/delete-workflow-runs@main
       with:
-        retain_days: 0
-        keep_minimum_runs: 3
+        retain_days: 3
+        keep_minimum_runs: 7
+        workflow_id: ${{ github.workflow }}
