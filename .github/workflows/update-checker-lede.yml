@@ -62,11 +62,11 @@ jobs:
       uses: peter-evans/repository-dispatch@main
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        event-type: ImmortalWrt_Update
+        event-type: LEDE_Update
         client-payload: |
           {
-            "repository_owner": "immortalwrt",
-            "repository_name": "immortalwrt",
+            "repository_owner": "coolsnowwolf",
+            "repository_name": "lede",
             "repository_branch": "master"
           }
 
