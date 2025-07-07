@@ -58,57 +58,37 @@ jobs:
               "repository_branch": "master"
             }
 
-      - name: Cleanup workflow runs (GLI)
+      - name: Cleanup workflow runs
         if: ${{ success() || failure() }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           # 获取工作流文件路径
-          echo "识别工作流文件路径..."
-          
-          # 使用 github.workflow_ref 获取精确路径
           WORKFLOW_FILE="${{ github.workflow_ref }}"
           WORKFLOW_FILE="${WORKFLOW_FILE#*/}"
           WORKFLOW_FILE="${WORKFLOW_FILE%%@*}"
           
-          # 验证路径格式
+          # 如果路径格式不对，尝试搜索匹配文件
           if [[ "$WORKFLOW_FILE" != .github/workflows/*.yml ]]; then
-            # 如果格式不对，使用工作流名称搜索匹配的文件
-            echo "⚠️ 无法通过workflow_ref获取有效路径，尝试搜索工作流文件..."
             WORKFLOW_NAME="${{ github.workflow }}"
             WORKFLOW_FILE=$(find .github/workflows -name '*.yml' -exec grep -l "name:.*$WORKFLOW_NAME" {} + | head -1)
-            
-            if [[ -z "$WORKFLOW_FILE" ]]; then
-              echo "❌ 找不到匹配 '$WORKFLOW_NAME' 的工作流文件"
-              exit 0
-            fi
           fi
-          
-          echo "✅ 确定工作流文件路径: $WORKFLOW_FILE"
           
           # 安装必要工具
           if ! command -v gh jq &>/dev/null; then
-            echo "安装 GitHub CLI 和 jq..."
             sudo apt-get update
             sudo apt-get install -y gh jq
           fi
           
-          # 登录GitHub
-          echo "Logging in with GITHUB_TOKEN..."
-          gh auth login --with-token < /dev/null
-          
           # 获取工作流ID
-          echo "获取工作流ID..."
           WORKFLOW_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows" \
-            --jq ".workflows[] | select(.path == \"$WORKFLOW_FILE\").id")
-          
-          echo "工作流文件: $WORKFLOW_FILE"
-          echo "工作流ID: $WORKFLOW_ID"
+            --jq ".workflows[] | select(.path == \"$WORKFLOW_FILE\").id" \
+            -H "Authorization: Bearer $GITHUB_TOKEN")
           
           # 获取运行记录
-          echo "获取运行记录..."
-          RUNS_JSON=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$WORKFLOW_ID/runs?per_page=100")
+          RUNS_JSON=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$WORKFLOW_ID/runs?per_page=100" \
+            -H "Authorization: Bearer $GITHUB_TOKEN")
           
           # 处理运行记录
           KEEP_COUNT=5
@@ -117,31 +97,22 @@ jobs:
           while read -r id status created_at; do
             # 跳过当前运行
             if [[ "$status" == "in_progress" ]]; then
-              echo "⏳ 跳过当前运行: $id (状态: $status)"
               continue
             fi
             
             # 保留最近的运行
             if (( KEEP_COUNT > 0 )); then
-              echo "💾 保留运行: $id (创建于: $created_at)"
               ((KEEP_COUNT--))
             else
               TO_DELETE+=("$id")
-              echo "🗑️ 标记删除: $id (创建于: $created_at)"
             fi
           done < <(jq -r '.workflow_runs[] | "\(.id) \(.status) \(.created_at)"' <<< "$RUNS_JSON")
           
-          # 删除旧工作流
+          # 删除旧运行
           if [[ ${#TO_DELETE[@]} -gt 0 ]]; then
-            echo "🚮 删除 ${#TO_DELETE[@]} 个旧工作流"
             for id in "${TO_DELETE[@]}"; do
-              gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/runs/$id" --silent
-              sleep 0.5  # 避免触发速率限制
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/runs/$id" \
+                -H "Authorization: Bearer $GITHUB_TOKEN" --silent
+              sleep 0.5
             done
-          else
-            echo "✅ 无需删除旧工作流"
           fi
-          
-          # 清理退出
-          gh auth logout
-          echo "清理完成"
