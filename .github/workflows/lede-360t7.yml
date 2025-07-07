@@ -191,14 +191,100 @@ jobs:
           body_path: release.txt
           files: ${{ env.FIRMWARE }}/*
       
-      - name: Delete workflow runs
-        uses: Mattraks/delete-workflow-runs@main
-        with:
-          retain_days: 0
-          keep_minimum_runs: 5
-          workflow_id: ${{ github.workflow }}
-          repository: ${{ github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Cleanup workflow runs
+        if: ${{ success() || failure() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "开始清理工作流运行记录。"
+          
+          # 获取当前运行ID
+          CURRENT_RUN_ID=${{ github.run_id }}
+          echo "当前运行ID: $CURRENT_RUN_ID"
+          
+          # 获取工作流文件路径
+          WORKFLOW_FILE="${{ github.workflow_ref }}"
+          WORKFLOW_FILE="${WORKFLOW_FILE#*/}"
+          WORKFLOW_FILE="${WORKFLOW_FILE%%@*}"
+          echo "尝试通过 workflow_ref 获取工作流文件路径。"
+          
+          if [[ "$WORKFLOW_FILE" != .github/workflows/*.yml ]]; then
+            echo "无法通过 workflow_ref 获取有效路径，正在尝试通过工作流名称查找匹配的 YAML 文件。"
+            WORKFLOW_NAME="${{ github.workflow }}"
+            WORKFLOW_FILE=$(find .github/workflows -name '*.yml' -exec grep -l "name:.*$WORKFLOW_NAME" {} + | head -1)
+            
+            if [[ -z "$WORKFLOW_FILE" ]]; then
+              echo "未找到匹配的工作流文件，无法继续清理操作，脚本退出。"
+              exit 0
+            else
+              echo "成功找到匹配的工作流文件路径：$WORKFLOW_FILE"
+            fi
+          fi
+          
+          # 安装必要工具
+          if ! command -v gh jq &>/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y gh jq
+          fi
+          
+          # 获取工作流ID
+          echo "正在获取当前工作流在 GitHub 上的唯一标识符（工作流 ID）。"
+          WORKFLOW_ID=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows" \
+            --jq ".workflows[] | select(.path == \"$WORKFLOW_FILE\").id")
+          
+          if [[ -z "$WORKFLOW_ID" ]]; then
+            echo "未能获取工作流 ID，请检查仓库名称或工作流文件路径是否正确，脚本退出。"
+            exit 1
+          fi
+          
+          echo "成功获取工作流 ID：$WORKFLOW_ID"
+          
+          # 获取工作流运行记录
+          echo "正在从 GitHub 获取该工作流的所有运行记录。"
+          RUNS_JSON=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$WORKFLOW_ID/runs?per_page=100")
+          
+          # 保留工作流任务次数
+          KEEP_COUNT=5
+          TO_DELETE=()
+          
+          echo "正在分析运行记录，准备删除超出保留数量的历史记录。"
+          while read -r id status created_at; do
+            # 特殊处理当前运行
+            if [[ "$id" == "$CURRENT_RUN_ID" ]]; then
+              echo "保留当前运行：ID $id（本次运行），创建时间 $created_at。"
+              ((KEEP_COUNT--))
+              continue
+            fi
+            
+            if [[ "$status" == "in_progress" ]]; then
+              echo "跳过正在进行中的工作流：ID $id，状态为 in_progress。"
+              continue
+            fi
+            
+            if (( KEEP_COUNT > 0 )); then
+              echo "保留历史工作流运行记录：ID $id，创建时间 $created_at。"
+              ((KEEP_COUNT--))
+            else
+              TO_DELETE+=("$id")
+              echo "标记以下工作流运行记录为待删除：ID $id，创建时间 $created_at。"
+            fi
+          done < <(jq -r '.workflow_runs[] | "\(.id) \(.status) \(.created_at)"' <<< "$RUNS_JSON")
+          
+          # 删除旧工作流
+          if [[ ${#TO_DELETE[@]} -gt 0 ]]; then
+            echo "开始删除旧的工作流运行记录。"
+            for id in "${TO_DELETE[@]}"; do
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/runs/$id" --silent
+              echo "已删除运行记录，ID 为：$id。"
+              sleep 0.5
+            done
+            echo "本次共删除了 ${#TO_DELETE[@]} 条旧的工作流运行记录。"
+          else
+            echo "没有需要删除的旧工作流运行记录，清理操作已完成。"
+          fi
+          
+          echo "本次工作流运行记录清理任务已完成。"
       
       - name: Cleanup old releases and tags
         if: ${{ steps.compile.outputs.status == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled() }}
