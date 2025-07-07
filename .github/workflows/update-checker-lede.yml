@@ -65,12 +65,15 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           echo "开始清理工作流运行记录。"
+          
+          # 获取当前运行ID（重要）
+          CURRENT_RUN_ID=${{ github.run_id }}
+          echo "当前运行ID: $CURRENT_RUN_ID"
 
           # 获取工作流文件路径
           WORKFLOW_FILE="${{ github.workflow_ref }}"
           WORKFLOW_FILE="${WORKFLOW_FILE#*/}"
           WORKFLOW_FILE="${WORKFLOW_FILE%%@*}"
-
           echo "尝试通过 workflow_ref 获取工作流文件路径。"
 
           if [[ "$WORKFLOW_FILE" != .github/workflows/*.yml ]]; then
@@ -116,13 +119,20 @@ jobs:
 
           echo "正在分析运行记录，准备删除超出保留数量的历史记录。"
           while read -r id status created_at; do
+            # 特殊处理当前运行
+            if [[ "$id" == "$CURRENT_RUN_ID" ]]; then
+              echo "保留当前运行：ID $id（本次运行），创建时间 $created_at。"
+              ((KEEP_COUNT--))
+              continue
+            fi
+            
             if [[ "$status" == "in_progress" ]]; then
               echo "跳过正在进行中的工作流：ID $id，状态为 in_progress。"
               continue
             fi
 
             if (( KEEP_COUNT > 0 )); then
-              echo "保留最近的工作流运行记录：ID $id，创建时间 $created_at。"
+              echo "保留历史工作流运行记录：ID $id，创建时间 $created_at。"
               ((KEEP_COUNT--))
             else
               TO_DELETE+=("$id")
