@@ -1,15 +1,3 @@
-#
-# https://github.com/P3TERX/Actions-OpenWrt
-#
-# File: .github/workflows/update-checker.yml
-# Description: Source code update checker
-#
-# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
-
 name: LEDE Update Checker
 
 env:
@@ -25,50 +13,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        persist-credentials: true
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
-    - name: Get Commit Hash
-      id: getHash
-      run: |
-        commit_hash=$(git ls-remote "$REPO_URL" "refs/heads/$REPO_BRANCH" | awk '{print $1}')
-        echo "commitHash=$commit_hash" >> $GITHUB_OUTPUT
+      - name: Get Commit Hash
+        id: getHash
+        run: |
+          commit_hash=$(git ls-remote "$REPO_URL" "refs/heads/$REPO_BRANCH" | awk '{print $1}')
+          echo "commitHash=$commit_hash" >> $GITHUB_OUTPUT
 
-    - name: Compare Commit Hash
-      id: cacheHash
-      uses: actions/cache@v3
-      with:
-        path: .lede_commitHash
-        key: commitHash_${{ steps.getHash.outputs.commitHash }}
+      - name: Compare Commit Hash
+        id: cacheHash
+        uses: actions/cache@v3
+        with:
+          path: .lede_commitHash
+          key: commitHash_${{ steps.getHash.outputs.commitHash }}
 
-    - name: Save New Commit Hash
-      if: steps.cacheHash.outputs.cache-hit != 'true'
-      run: |
-        echo ${{ steps.getHash.outputs.commitHash }} | tee .lede_commitHash
+      - name: Save New Commit Hash
+        if: steps.cacheHash.outputs.cache-hit != 'true'
+        run: |
+          echo ${{ steps.getHash.outputs.commitHash }} | tee .lede_commitHash
 
-    - name: Commit and push changes
-      if: steps.cacheHash.outputs.cache-hit != 'true'
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git add .lede_commitHash
-        git commit -m "Update LEDE commit hash: ${{ steps.getHash.outputs.commitHash }}"
-        git push
+      - name: Commit and push changes
+        if: steps.cacheHash.outputs.cache-hit != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .lede_commitHash
+          git commit -m "Update LEDE commit hash: ${{ steps.getHash.outputs.commitHash }}"
+          git push
 
-    - name: Trigger build
-      if: steps.cacheHash.outputs.cache-hit != 'true'
-      uses: peter-evans/repository-dispatch@main
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        event-type: LEDE_Update
-        client-payload: |
-          {
-            "repository_owner": "coolsnowwolf",
-            "repository_name": "lede",
-            "repository_branch": "master"
-          }
+      - name: Trigger build
+        if: steps.cacheHash.outputs.cache-hit != 'true'
+        uses: peter-evans/repository-dispatch@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: LEDE_Update
+          client-payload: |
+            {
+              "repository_owner": "coolsnowwolf",
+              "repository_name": "lede",
+              "repository_branch": "master"
+            }
 
       - name: Cleanup workflow runs (GLI)
         if: ${{ success() || failure() }}
@@ -76,8 +64,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          # 获取工作流文件路径（两种方式）
-          echo "智能识别工作流文件路径..."
+          # 获取工作流文件路径
+          echo "识别工作流文件路径..."
           
           # 使用 github.workflow_ref 获取精确路径
           WORKFLOW_FILE="${{ github.workflow_ref }}"
