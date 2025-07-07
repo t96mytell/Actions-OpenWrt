@@ -58,33 +58,65 @@ jobs:
               "repository_branch": "master"
             }
 
-      - name: Get workflow path
-        id: get_path
+      - name: Cleanup workflow runs
         run: |
-          # 尝试从 github.workflow_ref 提取路径
-          WORKFLOW_PATH="${{ github.workflow_ref }}"
-          if [[ "$WORKFLOW_PATH" == *".github/workflows/"* ]]; then
-            WORKFLOW_PATH="${WORKFLOW_PATH#*/}"
-            WORKFLOW_PATH="${WORKFLOW_PATH%%@*}"
-          else
-            echo "无法通过 workflow_ref 获取有效路径，尝试通过名称查找。"
-            WORKFLOW_NAME="${{ github.workflow }}"
-            WORKFLOW_PATH=$(find .github/workflows -name "*.yml" -exec grep -l "name:.*$WORKFLOW_NAME" {} + | head -1)
-          fi
+          WORKFLOW_FILE="${{ steps.get_path.outputs.workflow_path }}"
+          GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          REPO="${{ github.repository }}"
+          CURRENT_RUN_ID=${{ github.run_id }}
 
-          if [[ -z "$WORKFLOW_PATH" ]]; then
-            echo "未能找到匹配的工作流文件路径。"
+          # 获取工作流ID
+          WORKFLOW_ID=$(gh api "repos/$REPO/actions/workflows" \
+            --jq ".workflows[] | select(.path == \"$WORKFLOW_FILE\").id" \
+            -H "Authorization: Bearer $GITHUB_TOKEN")
+
+          if [[ -z "$WORKFLOW_ID" ]]; then
+            echo "Error: Failed to get workflow ID."
             exit 1
           fi
 
-          echo "Detected workflow file path: $WORKFLOW_PATH"
-          echo "workflow_path=$WORKFLOW_PATH" >> "$GITHUB_OUTPUT"
+          # 获取所有运行记录
+          RUNS_JSON=$(gh api "repos/$REPO/actions/workflows/$WORKFLOW_ID/runs?per_page=100" \
+            -H "Authorization: Bearer $GITHUB_TOKEN")
 
-      - name: Delete workflow runs
-        uses: Mattraks/delete-workflow-runs@main
-        with:
-          retain_days: 0
-          keep_minimum_runs: 5
-          workflow_id: ${{ steps.get_path.outputs.workflow_path }}
-          repository: ${{ github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          KEEP_COUNT=5
+          TO_DELETE=()
+          CANDIDATES=()
+
+          # 提取所有已完成的运行记录，并跳过当前运行ID
+          while read -r id status created_at; do
+            if [[ "$status" == "in_progress" ]]; then
+              continue
+            fi
+            if [[ "$id" == "$CURRENT_RUN_ID" ]]; then
+              continue
+            fi
+            CANDIDATES+=("$id|$created_at")
+          done < <(jq -r '.workflow_runs[] | "\(.id) \(.status) \(.created_at)"' <<< "$RUNS_JSON")
+
+          # 添加当前运行ID作为第一条候选
+          CANDIDATES=("$CURRENT_RUN_ID|$(date +"%Y-%m-%dT%H:%M:%SZ")" "${CANDIDATES[@]}")
+
+          # 遍历候选列表，保留KEEP_COUNT值定义的个数，其余标记为删除
+          for item in "${CANDIDATES[@]}"; do
+            IFS='|' read -r id created_at <<< "$item"
+            if (( KEEP_COUNT > 0 )); then
+              echo "Keeping Run ID: $id | Created at: $created_at"
+              ((KEEP_COUNT--))
+            else
+              echo "Deleting Run ID: $id | Created at: $created_at"
+              TO_DELETE+=("$id")
+            fi
+          done
+
+          if [[ ${#TO_DELETE[@]} -gt 0 ]]; then
+            echo "Deleting ${#TO_DELETE[@]} old workflow runs..."
+            for id in "${TO_DELETE[@]}"; do
+              gh api -X DELETE "repos/$REPO/actions/runs/$id" \
+                -H "Authorization: Bearer $GITHUB_TOKEN" --silent
+              sleep 0.5
+            done
+            echo "Successfully deleted ${#TO_DELETE[@]} old workflow runs."
+          else
+            echo "No old workflow runs to delete."
+          fi
