@@ -138,7 +138,7 @@ jobs:
 
       - name: Organize files
         id: organize
-        if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+        if: steps.compile.outcome == 'success' && env.UPLOAD_FIRMWARE == 'true' && !cancelled()
         run: |
           cd immortalwrt/bin/targets/*/*
           rm -rf packages *rootfs.tar.gz *rootfs.img.gz *rootfs.img *.bin *.config *.buildinfo *.json sha256sums *.manifest
@@ -147,14 +147,14 @@ jobs:
 
       - name: Upload firmware directory
         uses: actions/upload-artifact@main
-        if: steps.organize.outputs.status == 'success' && !cancelled()
+        if: steps.compile.outcome == 'success' && steps.organize.outputs.status == 'success' && !cancelled()
         with:
           name: ${{ env.FILE_DATE }}_${{ env.PROJECT_NAME }}_${{ env.BUILD_NAME }}
           path: ${{ env.FIRMWARE }}
 
       - name: Generate release tag
         id: tag
-        if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+        if: steps.compile.outcome == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
         run: |
           # 读取设备型号
           DEVICE_MODEL=$(echo "${{ env.DEVICE_NAME }}" | sed 's/^_//')
@@ -178,7 +178,7 @@ jobs:
       
       - name: Upload firmware to release
         uses: softprops/action-gh-release@master
-        if: steps.tag.outputs.status == 'success' && !cancelled()
+        if: steps.compile.outcome == 'success' && steps.tag.outputs.status == 'success' && !cancelled()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -197,7 +197,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Cleanup old releases and tags
-        if: ${{ env.UPLOAD_RELEASE == 'true' && !cancelled() }}
+        if: ${{ steps.compile.outcome == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled() }}
         run: |
           set -e
           
