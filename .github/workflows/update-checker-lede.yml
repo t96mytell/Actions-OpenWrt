@@ -95,7 +95,8 @@ jobs:
           fi
           
           # 登录GitHub
-          echo "$GITHUB_TOKEN" | gh auth login --with-token
+          echo "Logging in with GITHUB_TOKEN..."
+          gh auth login --with-token < /dev/null
           
           # 获取工作流ID
           echo "获取工作流ID..."
