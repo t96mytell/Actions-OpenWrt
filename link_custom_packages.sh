@@ -6,7 +6,6 @@ OPENWRT_DIR="$GITHUB_WORKSPACE/$BUILD_DIR"
 # 第三方 feed 仓库目录源路径
 CUSTOM_FEED_DIR="$OPENWRT_DIR/feeds/custom"
 
-# 遍历查找目标目录，按优先级排列
 SEARCH_PATHS=(
     "$OPENWRT_DIR/package"
     "$OPENWRT_DIR/feeds/packages"
@@ -25,10 +24,10 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
 
     old_pkg_path=""
     for path in "${SEARCH_PATHS[@]}"; do
-        # 排除软链接目录，且不在第三方 feed 仓库目录源路径下
-        old_pkg_path=$(find "$path" -mindepth 1 -maxdepth 1 -type d ! -xtype l \
-            ! -path "$CUSTOM_FEED_DIR/*" -name "$pkg_name" | head -n 1)
-        if [ -n "$old_pkg_path" ]; then
+        echo "[DEBUG] 在 $path 查找 $pkg_name"
+        found=$(find "$path" -type d -name "$pkg_name" ! -path "$CUSTOM_FEED_DIR/*" | head -n 1)
+        if [ -n "$found" ]; then
+            old_pkg_path="$found"
             break
         fi
     done
@@ -54,8 +53,9 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
 done
 
 echo "----------------------------------------"
-echo "共检查 $total_count 个包"
-echo "替换 $replace_count 个包"
+echo "共检查了 $total_count 个包"
+echo "替换成功 $replace_count 个包"
 echo "跳过 $skip_count 个包"
 echo "----------------------------------------"
+
 
