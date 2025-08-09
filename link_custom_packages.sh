@@ -25,14 +25,15 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
 
     old_pkg_path=""
     for path in "${SEARCH_PATHS[@]}"; do
-        old_pkg_path=$(find "$path" -type d -name "$pkg_name" | head -n 1)
+        # 排除软链接目录，且不在第三方 feed 仓库目录源路径下
+        old_pkg_path=$(find "$path" -mindepth 1 -maxdepth 1 -type d ! -xtype l \
+            ! -path "$CUSTOM_FEED_DIR/*" -name "$pkg_name" | head -n 1)
         if [ -n "$old_pkg_path" ]; then
             break
         fi
     done
 
     if [ -n "$old_pkg_path" ]; then
-        # 判断是否已是正确软链
         if [ -L "$old_pkg_path" ] && [ "$(readlink -f "$old_pkg_path")" = "$(readlink -f "$pkg")" ]; then
             echo "跳过 $pkg_name - 目标目录已是正确软链"
             skip_count=$((skip_count+1))
@@ -41,7 +42,6 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
 
         rm -rf "$old_pkg_path"
         ln -sf "$pkg" "$old_pkg_path"
-
         src_rel=$(realpath --relative-to="$OPENWRT_DIR" "$pkg")
         dst_rel=$(realpath --relative-to="$OPENWRT_DIR" "$old_pkg_path")
         echo "$src_rel → $dst_rel"
@@ -58,3 +58,4 @@ echo "共检查 $total_count 个包"
 echo "替换 $replace_count 个包"
 echo "跳过 $skip_count 个包"
 echo "----------------------------------------"
+
