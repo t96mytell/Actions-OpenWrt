@@ -41,6 +41,7 @@ jobs:
 
     env:
       # 兼容两种触发方式：手动触发（workflow_dispatch）和自动触发（repository_dispatch）
+      BUILD_DIR: immortalwrt
       REPO_URL: "https://github.com/${{ github.event.inputs.repository_owner || github.event.client_payload.repository_owner }}/${{ github.event.inputs.repository_name || github.event.client_payload.repository_name }}"
       REPO_BRANCH: ${{ github.event.inputs.repository_branch || github.event.client_payload.repository_branch }}
       FEEDS_CONF: feeds.conf.default
@@ -51,7 +52,6 @@ jobs:
       UPLOAD_FIRMWARE: true
       UPLOAD_RELEASE: true
       PROJECT_NAME: immortalwrt
-      BUILD_DIR: immortalwrt
       BUILD_NAME: ipq40xx_generic
       TZ: Asia/Shanghai
 
