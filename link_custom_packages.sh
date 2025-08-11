@@ -61,7 +61,7 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
         # 尝试在搜索路径的直接子目录中查找
         if [ -d "$search_path/$pkg_name" ]; then
             candidate="$search_path/$pkg_name"
-            echo "  找到直接匹配: $candidate"
+            echo "  在当前目录找到匹配: $candidate"
             found_target="$candidate"
             break
         fi
