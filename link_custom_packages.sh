@@ -9,7 +9,7 @@ CUSTOM_FEED_DIR="$OPENWRT_DIR/feeds/custom"
 SEARCH_PATHS=(
     "$OPENWRT_DIR/package/network/utils"
     "$OPENWRT_DIR/feeds/packages/utils"
-	"$OPENWRT_DIR/feeds/packages/net"
+    "$OPENWRT_DIR/feeds/packages/net"
 )
 
 echo "========================================"
@@ -106,8 +106,9 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
             echo "  删除错误链接"
             rm -f "$found_target"
             
-            echo "  创建新链接: $pkg -> $found_target"
-            ln -sf "$pkg" "$found_target"
+            # 使用绝对路径创建链接
+            echo "  创建新链接: $pkg_abs -> $found_target"
+            ln -sf "$pkg_abs" "$found_target"
             
             # 验证链接
             new_link=$(readlink -f "$found_target")
@@ -115,7 +116,7 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
                 echo "  替换成功!"
                 replace_count=$((replace_count + 1))
             else
-                echo "  错误: 链接创建失败!"
+                echo "  错误: 链接创建失败! 实际指向: $new_link"
                 skip_count=$((skip_count + 1))
             fi
         fi
@@ -132,16 +133,22 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
             echo "  删除目录"
             rm -rf "$found_target"
             
-            echo "  创建链接: $pkg -> $found_target"
-            ln -sf "$pkg" "$found_target"
+            # 使用绝对路径创建链接
+            echo "  创建链接: $pkg_abs -> $found_target"
+            ln -sf "$pkg_abs" "$found_target"
             
             # 验证链接
-            new_link=$(readlink -f "$found_target")
-            if [ "$new_link" = "$pkg_abs" ]; then
-                echo "  替换成功!"
-                replace_count=$((replace_count + 1))
+            if [ -L "$found_target" ]; then
+                new_link=$(readlink -f "$found_target")
+                if [ "$new_link" = "$pkg_abs" ]; then
+                    echo "  替换成功!"
+                    replace_count=$((replace_count + 1))
+                else
+                    echo "  错误: 链接指向不正确! 实际指向: $new_link"
+                    skip_count=$((skip_count + 1))
+                fi
             else
-                echo "  错误: 链接创建失败!"
+                echo "  错误: 链接创建失败! 目标不是符号链接"
                 skip_count=$((skip_count + 1))
             fi
         fi
@@ -157,6 +164,6 @@ echo "----------------------------------------"
 echo "处理完成"
 echo "总包数:       $total_count"
 echo "替换成功:     $replace_count"
-echo "跳过处理:         $skip_count"
+echo "跳过处理:     $skip_count"
 echo "未找到目标:   $not_found_count"
 echo "========================================"
