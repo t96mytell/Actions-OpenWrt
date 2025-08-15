@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# 固件构建目录源路径
-OPENWRT_DIR="$GITHUB_WORKSPACE/$BUILD_DIR"
+# 固件构建目录源路径 - 使用实际工作目录
+OPENWRT_DIR="/workdir/$BUILD_DIR"
 # 第三方 feed 仓库目录源路径
 CUSTOM_FEED_DIR="$OPENWRT_DIR/feeds/custom"
 
@@ -18,13 +18,12 @@ echo "固件构建目录: $OPENWRT_DIR"
 echo "搜索路径: ${SEARCH_PATHS[*]}"
 echo "========================================"
 
-# 检查关键目录是否存在
+# 检查第三方 feed 仓库目录是否存在
 if [ ! -d "$CUSTOM_FEED_DIR" ]; then
     echo "错误: 自定义 feed 目录不存在: $CUSTOM_FEED_DIR"
     exit 1
 fi
 
-# 显示自定义 feed 内容
 echo "自定义 feed 内容:"
 ls -l "$CUSTOM_FEED_DIR"
 echo "----------------------------------------"
@@ -61,7 +60,7 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
         # 尝试在搜索路径的直接子目录中查找
         if [ -d "$search_path/$pkg_name" ]; then
             candidate="$search_path/$pkg_name"
-            echo "  在当前目录找到匹配: $candidate"
+            echo "  在当前目录中匹配到: $candidate"
             found_target="$candidate"
             break
         fi
@@ -70,7 +69,7 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
         for subdir in "$search_path"/*; do
             if [ -d "$subdir" ] && [ -d "$subdir/$pkg_name" ]; then
                 candidate="$subdir/$pkg_name"
-                echo "  在子目录 $subdir 中找到匹配: $candidate"
+                echo "  在子目录 $subdir 中匹配到: $candidate"
                 found_target="$candidate"
                 break 2
             fi
@@ -87,36 +86,35 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
 
     echo "  找到目标: $found_target"
     
-    # 获取绝对路径用于比较
-    pkg_abs=$(cd "$pkg" && pwd)
-    target_abs=$(cd "$(dirname "$found_target")" && pwd)/$(basename "$found_target")
+    # 获取实际路径用于比较
+    pkg_real=$(realpath "$pkg")
+    target_real=$(realpath "$found_target")
     
     # 检查目标类型
     if [ -L "$found_target" ]; then
         # 处理软链接
-        link_target=$(readlink -f "$found_target")
+        link_target=$(realpath "$found_target")
         echo "  类型: 软链接"
         echo "  当前指向: $link_target"
-        echo "  期望指向: $pkg_abs"
+        echo "  期望指向: $pkg_real"
         
-        if [ "$link_target" = "$pkg_abs" ]; then
+        if [ "$link_target" = "$pkg_real" ]; then
             echo "  跳过: 已是正确软链接"
             skip_count=$((skip_count + 1))
         else
             echo "  删除错误链接"
             rm -f "$found_target"
             
-            # 使用绝对路径创建链接
-            echo "  创建新链接: $pkg_abs -> $found_target"
-            ln -sf "$pkg_abs" "$found_target"
+            echo "  创建新链接: $pkg -> $found_target"
+            ln -sf "$pkg" "$found_target"
             
             # 验证链接
-            new_link=$(readlink -f "$found_target")
-            if [ "$new_link" = "$pkg_abs" ]; then
+            new_link=$(realpath "$found_target")
+            if [ "$new_link" = "$pkg_real" ]; then
                 echo "  替换成功!"
                 replace_count=$((replace_count + 1))
             else
-                echo "  错误: 链接创建失败! 实际指向: $new_link"
+                echo "  错误: 链接创建失败!"
                 skip_count=$((skip_count + 1))
             fi
         fi
@@ -125,30 +123,23 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
         echo "  类型: 普通目录"
         
         # 检查是否指向自定义 feed 自身
-        target_real=$(cd "$found_target" && pwd)
-        if [ "$target_real" = "$pkg_abs" ]; then
+        if [ "$target_real" = "$pkg_real" ]; then
             echo "  跳过: 目标路径指向自定义 feed 自身"
             skip_count=$((skip_count + 1))
         else
             echo "  删除目录"
             rm -rf "$found_target"
             
-            # 使用绝对路径创建链接
-            echo "  创建链接: $pkg_abs -> $found_target"
-            ln -sf "$pkg_abs" "$found_target"
+            echo "  创建链接: $pkg -> $found_target"
+            ln -sf "$pkg" "$found_target"
             
             # 验证链接
-            if [ -L "$found_target" ]; then
-                new_link=$(readlink -f "$found_target")
-                if [ "$new_link" = "$pkg_abs" ]; then
-                    echo "  替换成功!"
-                    replace_count=$((replace_count + 1))
-                else
-                    echo "  错误: 链接指向不正确! 实际指向: $new_link"
-                    skip_count=$((skip_count + 1))
-                fi
+            new_link=$(realpath "$found_target")
+            if [ "$new_link" = "$pkg_real" ]; then
+                echo "  替换成功!"
+                replace_count=$((replace_count + 1))
             else
-                echo "  错误: 链接创建失败! 目标不是符号链接"
+                echo "  错误: 链接创建失败!"
                 skip_count=$((skip_count + 1))
             fi
         fi
