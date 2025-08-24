@@ -90,9 +90,8 @@ jobs:
       - name: Install feeds
         run: cd $BUILD_DIR && ./scripts/feeds install -a
 
-      - name: Delete the keepalived package from the lede project
-        run: |
-          rm -rf $BUILD_DIR/feeds/luci/applications/luci-app-keepalived && rm -rf $BUILD_DIR/feeds/packages/net/keepalived
+      - name: Link custom packages
+        run: bash $GITHUB_WORKSPACE/link_custom_packages.sh
              
       - name: Load custom configuration
         run: |
