@@ -93,6 +93,11 @@ jobs:
       - name: Link custom packages
         run: bash $GITHUB_WORKSPACE/link_custom_packages.sh
 
+      - name: Give short-commit script permissions
+        run: |
+          chmod +x $BUILD_DIR/feeds/custom/docker/git-short-commit.sh
+          chmod +x $BUILD_DIR/feeds/custom/dockerd/git-short-commit.sh
+
       - name: Load custom configuration
         run: |
           # 移动自定义文件目录（如果存在）
