@@ -95,7 +95,6 @@ jobs:
 
       - name: Give short-commit script permissions
         run: |
-          chmod +x $BUILD_DIR/feeds/custom/docker/git-short-commit.sh
           chmod +x $BUILD_DIR/feeds/custom/dockerd/git-short-commit.sh
 
       - name: Load custom configuration
