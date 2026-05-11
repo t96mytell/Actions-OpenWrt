@@ -131,7 +131,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.ccache
-          key: ${{ runner.os }}-ccache-${{ env.ARCH_NAME }}-${{ hashFiles(env.CONFIG_FILE) }}
+          key: ${{ runner.os }}-ccache-${{ env.ARCH_NAME }}-${{ hashFiles(env.CONFIG_FILE,format('{0}/include/target.mk', env.BUILD_DIR), format('{0}/toolchain/**/Makefile', env.BUILD_DIR)) }}
           restore-keys: |
             ${{ runner.os }}-ccache-${{ env.ARCH_NAME }}-
 
