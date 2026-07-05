@@ -33,7 +33,6 @@ if [ -n "$RESTORE_PACKAGES" ]; then
 fi
 echo "========================================"
 
-# 检查第三方 feed 仓库目录是否存在
 if [ ! -d "$CUSTOM_FEED_DIR" ]; then
     echo "错误: 自定义 feed 目录不存在: $CUSTOM_FEED_DIR"
     exit 1
@@ -43,12 +42,9 @@ echo "自定义 feed 内容:"
 ls -l "$CUSTOM_FEED_DIR"
 echo "----------------------------------------"
 
-# 创建备份目录（如果不存在）
 mkdir -p "$BACKUP_DIR"
-# 创建日志文件（如果不存在）
 touch "$LOG_FILE"
 
-# 处理恢复包列表
 declare -A restore_packages_map
 if [ "$RESTORE_MODE" = "select" ] && [ -n "$RESTORE_PACKAGES" ]; then
     IFS=',' read -ra pkg_array <<< "$RESTORE_PACKAGES"
@@ -66,7 +62,6 @@ restore_count=0
 echo "开始处理自定义 feed 中的包..."
 echo "----------------------------------------"
 
-# 函数：判断是否需要恢复该包的备份
 should_restore_package() {
     local pkg_name="$1"
     
@@ -90,12 +85,10 @@ should_restore_package() {
     esac
 }
 
-# 函数：恢复最新的备份版本
 restore_latest_backup() {
     local pkg_name="$1"
     local found_target="$2"
     
-    # 查找该包的所有备份，按时间排序
     local backups=($(ls -d "$BACKUP_DIR/$pkg_name"-* 2>/dev/null | sort -r))
     
     if [ ${#backups[@]} -eq 0 ]; then
@@ -106,17 +99,33 @@ restore_latest_backup() {
     local latest_backup="${backups[0]}"
     echo "  恢复最新备份: $(basename "$latest_backup")"
     
-    # 删除当前目录/链接
     rm -rf "$found_target"
-    
-    # 恢复备份
     cp -r "$latest_backup" "$found_target"
-    echo "$(date) 恢复包 $pkg_name 从备份 $(basename "$latest_backup")" >> "$LOG_FILE"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') 恢复包 $pkg_name 从备份 $(basename "$latest_backup")" >> "$LOG_FILE"
     echo "  ✓ 恢复备份成功!"
     return 0
 }
 
-# 遍历自定义 feed 中的每个包
+# 函数：创建备份并进行替换
+create_backup_and_replace() {
+    local pkg_name="$1"
+    local pkg="$2"
+    local found_target="$3"
+    
+    # 创建备份
+    local timestamp=$(date +%s)
+    local readable_time=$(date '+%Y-%m-%d %H:%M:%S')
+    local backup_dir="$BACKUP_DIR/$pkg_name-$timestamp"
+    
+    echo "  创建备份: $backup_dir ($readable_time)"
+    cp -r "$found_target" "$backup_dir"
+    echo "$readable_time 备份包 $pkg_name 至 $backup_dir" >> "$LOG_FILE"
+    
+    # 执行替换
+    rm -rf "$found_target"
+    ln -sf "$pkg" "$found_target"
+}
+
 for pkg in "$CUSTOM_FEED_DIR"/*; do
     [ -d "$pkg" ] || continue
     pkg_name=$(basename "$pkg")
@@ -125,7 +134,6 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
     echo "处理包 [$total_count]: $pkg_name"
     echo "源路径: $pkg"
 
-    # 在搜索路径中查找同名目录
     found_target=""
     for search_path in "${SEARCH_PATHS[@]}"; do
         if [ ! -d "$search_path" ]; then
@@ -157,14 +165,6 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
     pkg_real=$(realpath "$pkg")
     target_real=$(realpath "$found_target" 2>/dev/null || echo "")
 
-    # 创建备份
-    timestamp=$(date +%Y%m%d%H%M%S)
-    backup_dir="$BACKUP_DIR/$pkg_name-$timestamp"
-    
-    echo "  创建备份: $backup_dir"
-    cp -r "$found_target" "$backup_dir"
-    echo "$(date) 备份包 $pkg_name 至 $backup_dir" >> "$LOG_FILE"
-
     # 检查是否需要恢复备份
     if should_restore_package "$pkg_name"; then
         if restore_latest_backup "$pkg_name" "$found_target"; then
@@ -174,9 +174,8 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
         fi
     fi
 
-    # 替换操作
+    # 处理软链接
     if [ -L "$found_target" ]; then
-        # 处理软链接
         link_target=$(realpath "$found_target" 2>/dev/null || echo "")
         echo "  类型: 软链接"
         echo "  当前指向: $link_target"
@@ -186,10 +185,8 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
             echo "  ✓ 跳过: 已是正确软链接"
             skip_count=$((skip_count + 1))
         else
-            echo "  删除错误链接"
-            rm -f "$found_target"
-            echo "  创建新链接"
-            ln -sf "$pkg" "$found_target"
+            echo "  错误链接，进行替换..."
+            create_backup_and_replace "$pkg_name" "$pkg" "$found_target"
             new_link=$(realpath "$found_target" 2>/dev/null || echo "")
             if [ "$new_link" = "$pkg_real" ]; then
                 echo "  ✓ 替换成功"
@@ -207,10 +204,8 @@ for pkg in "$CUSTOM_FEED_DIR"/*; do
             echo "  ✓ 跳过: 目标指向自定义 feed 自身"
             skip_count=$((skip_count + 1))
         else
-            echo "  删除目录"
-            rm -rf "$found_target"
-            echo "  创建新链接"
-            ln -sf "$pkg" "$found_target"
+            echo "  目录内容不同，进行替换..."
+            create_backup_and_replace "$pkg_name" "$pkg" "$found_target"
             new_link=$(realpath "$found_target" 2>/dev/null || echo "")
             if [ "$new_link" = "$pkg_real" ]; then
                 echo "  ✓ 替换成功"
@@ -233,13 +228,11 @@ echo "清理过期备份..."
 backup_cleanup_count=0
 current_time=$(date +%s)
 
-# 第一步：按包名分组备份
 declare -A pkg_backups_map
-for backup_path in "$BACKUP_DIR"/*-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]; do
+for backup_path in "$BACKUP_DIR"/*-[0-9]*; do
     [ -d "$backup_path" ] || continue
     
     backup_name=$(basename "$backup_path")
-    # 提取包名（去掉末尾的-时间戳部分）
     pkg_name="${backup_name%-[0-9]*}"
     
     if [ -z "${pkg_backups_map[$pkg_name]}" ]; then
@@ -249,40 +242,30 @@ for backup_path in "$BACKUP_DIR"/*-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]
     fi
 done
 
-# 第二步：对每个包的备份进行清理
 for pkg_name in "${!pkg_backups_map[@]}"; do
     IFS='|' read -ra backups_array <<< "${pkg_backups_map[$pkg_name]}"
-    
-    # 按备份路径排序（因为时间戳在末尾，字典序 = 时间序）
     IFS=$'\n' sorted_backups=($(printf '%s\n' "${backups_array[@]}" | sort -r))
     unset IFS
     
     echo "  包 [$pkg_name] 有 ${#sorted_backups[@]} 个备份"
     
-    # 第三步：遍历备份，保留最新的，清理过期的
     for i in "${!sorted_backups[@]}"; do
         backup_path="${sorted_backups[$i]}"
         backup_name=$(basename "$backup_path")
-        
-        # 获取备份时间戳（文件名末尾14位数字）
-        backup_timestamp="${backup_name: -14}"
-        
-        # 计算备份年龄
+        backup_timestamp="10#${backup_name: -10}"
         backup_age=$((current_time - backup_timestamp))
         
         if [ $i -eq 0 ]; then
-            # 第一个（最新的）备份总是保留，即使超出时间限制
             if [ $backup_age -gt $BACKUP_RETENTION_TIME ]; then
                 echo "    ✓ 保留最新备份（超期但保留）: $backup_name (${backup_age}秒前)"
             else
                 echo "    ✓ 保留最新备份: $backup_name (${backup_age}秒前)"
             fi
         else
-            # 非最新备份：只有超出时间限制才删除
             if [ $backup_age -gt $BACKUP_RETENTION_TIME ]; then
                 rm -rf "$backup_path"
                 echo "    ✗ 删除过期备份: $backup_name (${backup_age}秒前)"
-                echo "$(date) 删除过期备份: $backup_path (年龄: ${backup_age}秒)" >> "$LOG_FILE"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') 删除过期备份: $backup_path (年龄: ${backup_age}秒)" >> "$LOG_FILE"
                 backup_cleanup_count=$((backup_cleanup_count + 1))
             else
                 echo "    ✓ 保留备份（在保留期内）: $backup_name (${backup_age}秒前)"
