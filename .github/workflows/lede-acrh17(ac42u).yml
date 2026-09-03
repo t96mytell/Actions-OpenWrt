@@ -10,7 +10,7 @@
 # See /LICENSE for more information.
 #
 
-name: lede-360t7-test
+name: lede-acrh17(ac42u)
 
 on:
   repository_dispatch:
@@ -45,14 +45,14 @@ jobs:
       REPO_URL: "https://github.com/${{ github.event.inputs.repository_owner || github.event.client_payload.repository_owner }}/${{ github.event.inputs.repository_name || github.event.client_payload.repository_name }}"
       REPO_BRANCH: ${{ github.event.inputs.repository_branch || github.event.client_payload.repository_branch }}
       FEEDS_CONF: feeds.conf.default
-      CONFIG_FILE: config/lede_diff360t7-test.config
+      CONFIG_FILE: config/lede_diffacrh17(ac42u)-test.config
       DIY_P1_SH: diy-feeds-lede.sh
       DIY_P2_SH: modify_default.sh
       UPLOAD_BIN_DIR: false
       UPLOAD_FIRMWARE: true
       UPLOAD_RELEASE: true
       PROJECT_NAME: lede
-      BUILD_NAME: mediatek_filogic
+      BUILD_NAME: ipq40xx_generic
       TZ: Asia/Shanghai
 
     steps:
