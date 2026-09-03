@@ -116,7 +116,7 @@ jobs:
           toolchain: 'true'
           skip: 'true'
           clean: 'false'
-          mixkey: ''
+          mixkey: '${{ github.workflow }}'
           skip_saving: 'false'
 
       - name: Download package
