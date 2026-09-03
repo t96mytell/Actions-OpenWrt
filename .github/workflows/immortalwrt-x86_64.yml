@@ -116,6 +116,17 @@ jobs:
           github.event.inputs.enable_ssh == 'true'
         uses: mxschmitt/action-tmate@v3
 
+      - name: Cache
+        uses: klever1988/cachewrtbuild@main
+        with:
+          ccache: 'false'
+          prefix: ${{ env.BUILD_DIR }}
+          toolchain: 'true'
+          skip: 'true'
+          clean: 'false'
+          mixkey: ''
+          skip_saving: 'false'
+
       - name: Download package
         id: package
         run: |
