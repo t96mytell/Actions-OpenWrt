@@ -108,9 +108,6 @@ jobs:
         run: |
           chmod +x $BUILD_DIR/feeds/custom/dockerd/git-short-commit.sh
 
-      - name: Use 1.26.x version golang
-        run: cd $BUILD_DIR && rm -rf feeds/packages/lang/golang && git clone https://github.com/sbwml/packages_lang_golang -b 26.x feeds/packages/lang/golang
-
       - name: Load custom configuration
         run: |
           # 移动自定义文件目录（如果存在）
