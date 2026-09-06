@@ -77,6 +77,17 @@ jobs:
           git clone $REPO_URL -b $REPO_BRANCH $BUILD_DIR
           ln -sf /workdir/$BUILD_DIR $GITHUB_WORKSPACE/$BUILD_DIR
 
+      - name: Cache
+        uses: klever1988/cachewrtbuild@main
+        with:
+          ccache: 'false'
+          prefix: ${{ env.BUILD_DIR }}
+          toolchain: 'true'
+          skip: 'true'
+          clean: 'false'
+          mixkey: '${{ github.workflow }}'
+          skip_saving: 'false'
+
       - name: Load custom feeds
         run: |
           [ -e $FEEDS_CONF ] && mv $FEEDS_CONF $BUILD_DIR/feeds.conf.default
@@ -115,17 +126,6 @@ jobs:
           github.event_name == 'workflow_dispatch' &&
           github.event.inputs.enable_ssh == 'true'
         uses: mxschmitt/action-tmate@v3
-
-      - name: Cache
-        uses: klever1988/cachewrtbuild@main
-        with:
-          ccache: 'false'
-          prefix: ${{ env.BUILD_DIR }}
-          toolchain: 'true'
-          skip: 'true'
-          clean: 'false'
-          mixkey: '${{ github.workflow }}'
-          skip_saving: 'false'
 
       - name: Download package
         id: package
