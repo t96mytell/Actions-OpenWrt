@@ -140,11 +140,11 @@ jobs:
           if grep -q "^CONFIG_KERNEL_DEBUG_INFO_REDUCED=y" .config; then
             sed -i 's/^CONFIG_KERNEL_DEBUG_INFO_REDUCED=y/# CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set/' .config
           fi
+          make defconfig
           
           if grep -q "^# CONFIG_KERNEL_DEBUG_INFO_BTF is not set" .config; then
             sed -i 's/^# CONFIG_KERNEL_DEBUG_INFO_BTF is not set/CONFIG_KERNEL_DEBUG_INFO_BTF=y/' .config
           fi
-          
           make defconfig
           
           # 验证
