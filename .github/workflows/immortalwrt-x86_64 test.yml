@@ -136,6 +136,21 @@ jobs:
         id: compile
         run: |
           cd $BUILD_DIR
+
+          if grep -q "^CONFIG_KERNEL_DEBUG_INFO_REDUCED=y" .config; then
+            sed -i 's/^CONFIG_KERNEL_DEBUG_INFO_REDUCED=y/# CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set/' .config
+          fi
+          
+          if grep -q "^# CONFIG_KERNEL_DEBUG_INFO_BTF is not set" .config; then
+            sed -i 's/^# CONFIG_KERNEL_DEBUG_INFO_BTF is not set/CONFIG_KERNEL_DEBUG_INFO_BTF=y/' .config
+          fi
+          
+          make defconfig
+          
+          # 验证
+          echo "=== Kernel debug config ==="
+          grep "CONFIG_KERNEL_DEBUG_INFO" .config
+          
           echo -e "$(nproc) thread compile"
           make -j$(nproc) || (rm -f build_dir/target-*/inotify-tools-*/ipkg-install/usr/bin/{fsnotifywait,fsnotifywatch} && make -j1) || make -j1 V=s
           echo "status=success" >> $GITHUB_OUTPUT
