@@ -45,7 +45,7 @@ jobs:
       REPO_URL: "https://github.com/${{ github.event.inputs.repository_owner || github.event.client_payload.repository_owner }}/${{ github.event.inputs.repository_name || github.event.client_payload.repository_name }}"
       REPO_BRANCH: ${{ github.event.inputs.repository_branch || github.event.client_payload.repository_branch }}
       FEEDS_CONF: feeds.conf.default
-      CONFIG_FILE: config/immortalwrt_diffx86_64 test.config
+      CONFIG_FILE: config/immortalwrt_diffx86_64_test.config
       DIY_P1_SH: diy-feeds-immortalwrt.sh
       DIY_P2_SH: modify_default.sh
       UPLOAD_BIN_DIR: false
@@ -117,6 +117,15 @@ jobs:
           cd $BUILD_DIR
           $GITHUB_WORKSPACE/$DIY_P2_SH
           make defconfig
+          echo -e 'CONFIG_KERNEL_DEBUG_INFO_BTF=y\nCONFIG_KERNEL_DEBUG_INFO_BTF_MODULES=y' >> .config
+          echo '# CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set' >> .config
+
+          # 验证
+          echo "=== Kernel debug config ==="
+          grep "CONFIG_KERNEL_DEBUG_INFO" .config
+          grep "CONFIG_KERNEL_KPROBE" .config
+          grep "CONFIG_KERNEL_BPF" .config
+          grep "CONFIG_KERNEL_XDP_SOCKETS" .config
 
       - name: Start SSH Session (Debug)
         if: |
@@ -136,19 +145,6 @@ jobs:
         id: compile
         run: |
           cd $BUILD_DIR
-
-          if grep -q "^CONFIG_KERNEL_DEBUG_INFO_REDUCED=y" .config; then
-            sed -i 's/^CONFIG_KERNEL_DEBUG_INFO_REDUCED=y/# CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set/' .config
-          fi
-          
-          if grep -q "^# CONFIG_KERNEL_DEBUG_INFO_BTF is not set" .config; then
-            sed -i 's/^# CONFIG_KERNEL_DEBUG_INFO_BTF is not set/CONFIG_KERNEL_DEBUG_INFO_BTF=y/' .config
-          fi
-          
-          # 验证
-          echo "=== Kernel debug config ==="
-          grep "CONFIG_KERNEL_DEBUG_INFO" .config
-          
           echo -e "$(nproc) thread compile"
           make -j$(nproc) || (rm -f build_dir/target-*/inotify-tools-*/ipkg-install/usr/bin/{fsnotifywait,fsnotifywatch} && make -j1) || make -j1 V=s
           echo "status=success" >> $GITHUB_OUTPUT
