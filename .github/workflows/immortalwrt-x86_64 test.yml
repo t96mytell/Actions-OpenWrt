@@ -117,8 +117,8 @@ jobs:
           cd $BUILD_DIR
           $GITHUB_WORKSPACE/$DIY_P2_SH
           make defconfig
-          echo -e 'CONFIG_KERNEL_DEBUG_INFO_BTF=y\nCONFIG_KERNEL_DEBUG_INFO_BTF_MODULES=y' >> .config
-          echo '# CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set' >> .config
+          # echo -e 'CONFIG_KERNEL_DEBUG_INFO_BTF=y\nCONFIG_KERNEL_DEBUG_INFO_BTF_MODULES=y' >> .config
+          # echo '# CONFIG_KERNEL_DEBUG_INFO_REDUCED is not set' >> .config
 
           # 验证
           echo "=== Kernel debug config ==="
